@@ -21,7 +21,7 @@ export default async function handler(req, res) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'clgunduz@gmail.com',
+        user: 'cafer.guenduez@proton.me',
         pass: 'DEIN_APP_PASSWORT' // Nutze ein App-Passwort, nicht dein normales Gmail-Passwort!
       }
     });

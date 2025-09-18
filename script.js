@@ -322,16 +322,25 @@ class DigitalCraftWebsite {
     }
 
     async submitForm(form) {
-        const formData = new FormData(form);
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn?.textContent;
 
         try {
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner"></span> Wird gesendet...';
+            }
+
+            const formData = new FormData(form);
             const response = await fetch(form.action, {
                 method: 'POST',
                 body: formData
             });
+            
             const result = await response.json();
 
             if (result.success) {
+                // Erfolgsmeldung anzeigen
                 this.showFormSuccess();
                 form.reset();
                 this.clearFormData();
@@ -340,6 +349,11 @@ class DigitalCraftWebsite {
             }
         } catch (error) {
             this.showFormError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
         }
     }
 

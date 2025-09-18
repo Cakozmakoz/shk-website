@@ -659,7 +659,7 @@
             <p class="section-subtitle">Lassen Sie uns gemeinsam Ihren <strong>Handwerksbetrieb digitalisieren</strong> und mehr Kunden gewinnen</p>
             
             <div class="contact-content">
-                <form class="contact-form" aria-label="Kontaktformular für SHK Webseite">
+                <form class="contact-form" name="contact" method="POST" action="/api/contact">
                     <div class="form-group">
                         <label for="name">Name *</label>
                         <input type="text" id="name" name="name" required aria-describedby="name-error" placeholder="Ihr Name">
@@ -721,7 +721,7 @@
                     
                     <input type="hidden" name="calculator-data" id="calculator-data">
                     
-                    <button type="submit" class="btn btn-primary btn-large">
+                    <button type="submit" class="btn btn-primary">
                         Kostenlose SHK Website Beratung anfordern
                     </button>
                 </form>

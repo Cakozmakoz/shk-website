@@ -322,47 +322,8 @@ class DigitalCraftWebsite {
     }
 
     async submitForm(form) {
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn?.textContent;
-        
-        try {
-            // Show loading state
-            if (submitBtn) {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="spinner"></span> Wird gesendet...';
-            }
-
-            const formData = new FormData(form);
-            const formObject = Object.fromEntries(formData);
-            
-            // Track form submission attempt
-            this.trackEvent('form_submit_attempt', {
-                industry: formObject.industry,
-                website_type: formObject['website-type']
-            });
-
-            // Simulate form submission (replace with actual endpoint)
-            await this.sendFormData(formObject);
-            
-            // Show success message
-            this.showFormSuccess();
-            form.reset();
-            this.clearFormData();
-            
-            // Track successful submission
-            this.trackEvent('form_submit_success', formObject);
-            
-        } catch (error) {
-            console.error('Form submission error:', error);
-            this.showFormError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.');
-            this.trackEvent('form_submit_error', { error: error.message });
-        } finally {
-            // Reset button state
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalText;
-            }
-        }
+        // Standard-Submit, damit die Daten an die API-Route gesendet werden
+        form.submit();
     }
 
     async sendFormData(formData) {
@@ -725,216 +686,21 @@ class DigitalCraftWebsite {
                         const img = entry.target;
                         if (img.dataset.src) {
                             img.src = img.dataset.src;
-                            img.onload = () => img.classList.add('loaded');
+                            img.removeAttribute('data-src');
+                            imageObserver.unobserve(img);
                         }
                     }
                 });
             });
 
-            const images = document.querySelectorAll('img[data-src]');
-            images.forEach(img => {
+            document.querySelectorAll('img[data-src]').forEach(img => {
                 imageObserver.observe(img);
             });
         }
-
-        // Optimize font loading
-        const fontPreload = document.createElement('link');
-        fontPreload.rel = 'preload';
-        fontPreload.href = '/fonts/your-font.woff2';
-        fontPreload.as = 'font';
-        fontPreload.crossOrigin = 'anonymous';
-        document.head.appendChild(fontPreload);
-
-        // Reduce JavaScript execution time
-        this.reduceJavaScriptExecutionTime();
-    }
-
-    reduceJavaScriptExecutionTime() {
-        // Split code into smaller chunks and load asynchronously
-        const scriptChunks = [
-            '/js/chunk-vendors.js',
-            '/js/app.js'
-        ];
-
-        scriptChunks.forEach(src => {
-            const script = document.createElement('script');
-            script.src = src;
-            script.async = true;
-            document.body.appendChild(script);
-        });
-    }
-
-    // Price Calculator specific methods
-    setupPriceCalculator() {
-        const calculatorForm = document.getElementById('price-calculator-form');
-        if (!calculatorForm) return;
-
-        const baseOptions = calculatorForm.querySelectorAll('input[name="base-option"]');
-        const addonOptions = calculatorForm.querySelectorAll('input[name^="addon-"]');
-        const detailFields = calculatorForm.querySelectorAll('input[name^="detail-"], textarea[name^="detail-"]');
-        const contractSelect = calculatorForm.querySelector('select[name="contract"]');
-        const resultSection = document.getElementById('price-calculator-results');
-
-        let state = {
-            baseOption: '',
-            addons: {},
-            details: {},
-            contract: '',
-            prices: {}
-        };
-
-        // Initialize state from localStorage
-        this.loadPriceCalculatorState(state);
-
-        // Base options change
-        baseOptions.forEach(option => {
-            option.addEventListener('change', (e) => {
-                const value = e.target.value;
-                state.baseOption = value;
-                this.updatePriceCalculatorResults(state, resultSection);
-                
-                // Track event
-                this.trackEvent('price_calculator_base_change', { base_option: value });
-            });
-        });
-
-        // Addon options change
-        addonOptions.forEach(option => {
-            option.addEventListener('change', (e) => {
-                const name = e.target.name;
-                const value = e.target.checked;
-                state.addons[name] = value;
-                this.updatePriceCalculatorResults(state, resultSection);
-                
-                // Track event
-                this.trackEvent('price_calculator_addon_change', { addon: name, enabled: value });
-            });
-        });
-
-        // Detail fields change
-        detailFields.forEach(field => {
-            field.addEventListener('input', (e) => {
-                const name = e.target.name;
-                const value = e.target.value;
-                state.details[name] = value;
-                this.updatePriceCalculatorResults(state, resultSection);
-            });
-        });
-
-        // Contract type change
-        contractSelect.addEventListener('change', (e) => {
-            const value = e.target.value;
-            state.contract = value;
-            this.updatePriceCalculatorResults(state, resultSection);
-        });
-
-        // Generate quote button
-        const generateQuoteBtn = document.getElementById('generate-quote');
-        generateQuoteBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.generateQuote(state);
-        });
-
-        // Update results on load
-        this.updatePriceCalculatorResults(state, resultSection);
-    }
-
-    updatePriceCalculatorResults(state, resultSection) {
-        const { baseOption, addons, details, contract, prices } = state;
-
-        // Calculate prices based on options selected
-        let total = 0;
-        let setup = 0;
-
-        // Base option price
-        if (baseOption === 'option1') {
-            total += 399;
-            setup += 99;
-        } else if (baseOption === 'option2') {
-            total += 599;
-            setup += 149;
-        } else if (baseOption === 'option3') {
-            total += 799;
-            setup += 199;
-        }
-
-        // Addon prices
-        Object.keys(addons).forEach(addon => {
-            if (addons[addon]) {
-                if (addon === 'addon1') {
-                    total += 49;
-                } else if (addon === 'addon2') {
-                    total += 99;
-                } else if (addon === 'addon3') {
-                    total += 199;
-                }
-            }
-        });
-
-        // Contract discounts
-        if (contract === '12months') {
-            total *= 0.9; // 10% discount
-        } else if (contract === '24months') {
-            total *= 0.85; // 15% discount
-        }
-
-        // Update state
-        state.prices = { total, setup };
-
-        // Display results
-        resultSection.querySelector('.price-total').textContent = `€${total.toFixed(2)}`;
-        resultSection.querySelector('.price-setup').textContent = `€${setup.toFixed(2)}`;
-    }
-
-    generateQuote(state) {
-        const { baseOption, addons, details, contract, prices } = state;
-
-        const quoteData = {
-            base: baseOption,
-            addons: addons,
-            details: details,
-            contract: contract,
-            prices: prices,
-            total: prices.total,
-            setup: prices.setup,
-            timestamp: new Date().toISOString()
-        };
-
-        // Save to localStorage
-        localStorage.setItem('priceCalculatorQuote', JSON.stringify(quoteData));
-
-        // Schreibe Daten ins Kontaktformular, falls Feld existiert
-        const hiddenField = document.getElementById('calculator-data');
-        if (hiddenField) {
-            hiddenField.value = JSON.stringify(quoteData);
-        }
-
-        // Kontaktformular anzeigen und Fokus setzen
-        const contactForm = document.querySelector('.contact-form');
-        if (contactForm) {
-            contactForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            const firstInput = contactForm.querySelector('input, textarea, select');
-            firstInput?.focus();
-        }
-    }
-
-    loadPriceCalculatorState(state) {
-        const savedState = JSON.parse(localStorage.getItem('priceCalculatorState'));
-        if (savedState) {
-            Object.assign(state, savedState);
-        }
-    }
-
-    savePriceCalculatorState(state) {
-        localStorage.setItem('priceCalculatorState', JSON.stringify(state));
     }
 }
 
-// Initialisierung der Website-Klasse
-document.addEventListener('DOMContentLoaded', () => {
-    const website = new DigitalCraftWebsite();
-    website.setupPriceCalculator();
-});
+// ...DigitalCraftWebsite-Klasse...
 
 class PriceCalculator {
     constructor() {
@@ -1161,9 +927,6 @@ class PriceCalculator {
             setup: this.prices.setup,
             timestamp: new Date().toISOString()
         };
-
-        // Save to localStorage
-        localStorage.setItem('priceCalculatorQuote', JSON.stringify(quoteData));
 
         // Schreibe Daten ins Kontaktformular, falls Feld existiert
         const hiddenField = document.getElementById('calculator-data');

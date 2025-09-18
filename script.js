@@ -238,8 +238,7 @@ class DigitalCraftWebsite {
 
         // Form submission
         form.addEventListener('submit', (e) => {
-            e.preventDefault();
-            
+            e.preventDefault(); // Verhindert das Standard-Formularverhalten
             let isValid = true;
             inputs.forEach(input => {
                 if (!this.validateField(input)) {
@@ -249,14 +248,6 @@ class DigitalCraftWebsite {
 
             if (isValid) {
                 this.submitForm(form);
-            } else {
-                // Focus first invalid field
-                const firstError = form.querySelector('.error-message:not([style*="display: none"])');
-                if (firstError) {
-                    const fieldId = firstError.id.replace('-error', '');
-                    document.getElementById(fieldId)?.focus();
-                }
-                this.trackEvent('form_validation_error');
             }
         });
 
@@ -332,7 +323,7 @@ class DigitalCraftWebsite {
             }
 
             const formData = new FormData(form);
-            const response = await fetch(form.action, {
+            const response = await fetch('/api/contact', {
                 method: 'POST',
                 body: formData
             });
@@ -341,9 +332,25 @@ class DigitalCraftWebsite {
 
             if (result.success) {
                 // Erfolgsmeldung anzeigen
-                this.showFormSuccess();
+                const message = document.createElement('div');
+                message.className = 'form-message success';
+                message.innerHTML = `
+                    <strong>✓ Vielen Dank!</strong><br>
+                    Ihre Nachricht wurde erfolgreich gesendet. Wir melden uns innerhalb von 48 Stunden bei Ihnen.
+                `;
+                message.setAttribute('role', 'alert');
+                
+                // Meldung über dem Formular einfügen
+                form.insertBefore(message, form.firstChild);
+                
+                // Zum Anfang des Formulars scrollen
+                message.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Formular zurücksetzen
                 form.reset();
-                this.clearFormData();
+                
+                // Nach 10 Sekunden Erfolgsmeldung ausblenden
+                setTimeout(() => message.remove(), 10000);
             } else {
                 this.showFormError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
             }
@@ -355,6 +362,9 @@ class DigitalCraftWebsite {
                 submitBtn.innerHTML = originalText;
             }
         }
+
+        // Wichtig: Standardverhalten des Formulars verhindern
+        return false;
     }
 
     async sendFormData(formData) {
@@ -717,270 +727,6 @@ class DigitalCraftWebsite {
                         const img = entry.target;
                         if (img.dataset.src) {
                             img.src = img.dataset.src;
-                            img.removeAttribute('data-src');
-                            imageObserver.unobserve(img);
-                        }
-                    }
-                });
-            });
-
-            document.querySelectorAll('img[data-src]').forEach(img => {
-                imageObserver.observe(img);
-            });
-        }
-    }
-}
-
-// ...DigitalCraftWebsite-Klasse...
-
-class PriceCalculator {
-    constructor() {
-        this.baseOption = null;
-        this.addons = [];
-        this.details = {};
-        this.contract = { duration: null, discount: 0 };
-        this.prices = {
-            base: 0,
-            addons: 0,
-            support: 0,
-            subtotal: 0,
-            discount: 0,
-            total: 0,
-            setup: 2500
-        };
-        this.currentStep = 0;
-        this.steps = [];
-        this.summary = null;
-        this.selectedItems = null;
-        this.calculateBtn = null;
-        this.nextBtn = null;
-        this.prevBtn = null;
-    }
-
-    init() {
-        this.steps = Array.from(document.querySelectorAll('.calculator-step'));
-        this.summary = document.querySelector('.price-summary');
-        this.selectedItems = document.querySelector('.selected-items');
-        this.calculateBtn = document.querySelector('.calculate-btn');
-        this.nextBtn = document.querySelector('.next-btn');
-        this.prevBtn = document.querySelector('.prev-btn');
-        this.setupEventListeners();
-        this.updateStep();
-        this.updatePriceSummary();
-    }
-
-    setupEventListeners() {
-        // Basisoptionen (Cards oder Buttons)
-        document.querySelectorAll('.option-card, .option-btn').forEach(card => {
-            card.addEventListener('click', () => {
-                document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-                this.baseOption = card.dataset.service || card.value;
-                this.prices.base = parseInt(card.dataset.price, 10) || 0;
-                this.updatePriceSummary();
-                this.updateSelectedItems();
-                this.nextBtn && (this.nextBtn.disabled = false);
-            });
-        });
-
-        // Add-ons (Checkboxen in Cards)
-        document.querySelectorAll('.addon-card input[type="checkbox"]').forEach(checkbox => {
-            checkbox.addEventListener('change', () => {
-                const card = checkbox.closest('.addon-card');
-                const addon = card.dataset.addon;
-                if (checkbox.checked) {
-                    if (!this.addons.includes(addon)) this.addons.push(addon);
-                } else {
-                    this.addons = this.addons.filter(a => a !== addon);
-                }
-                this.updatePriceSummary();
-                this.updateSelectedItems();
-            });
-        });
-
-        // Details (Selects)
-        document.querySelectorAll('.details-grid select').forEach(select => {
-            select.addEventListener('change', () => {
-                this.details[select.name] = select.value;
-                this.updatePriceSummary();
-                this.updateSelectedItems();
-            });
-        });
-
-        // Vertragslaufzeit (Cards)
-        document.querySelectorAll('.contract-card').forEach(card => {
-            card.addEventListener('click', () => {
-                document.querySelectorAll('.contract-card').forEach(c => c.classList.remove('selected'));
-                card.classList.add('selected');
-                this.contract.duration = card.dataset.duration;
-                this.contract.discount = parseFloat(card.dataset.discount) || 0;
-                this.updatePriceSummary();
-                this.updateSelectedItems();
-                this.calculateBtn && (this.calculateBtn.disabled = false);
-            });
-        });
-
-        // Navigation
-        this.nextBtn && this.nextBtn.addEventListener('click', () => this.nextStep());
-        this.prevBtn && this.prevBtn.addEventListener('click', () => this.prevStep());
-
-        // Angebot anfordern
-        this.calculateBtn && this.calculateBtn.addEventListener('click', () => {
-            if (!this.calculateBtn.disabled) {
-                this.generateQuote();
-            }
-        });
-    }
-
-    nextStep() {
-        if (this.currentStep < this.steps.length - 1) {
-            this.currentStep++;
-            this.updateStep();
-        }
-    }
-
-    prevStep() {
-        if (this.currentStep > 0) {
-            this.currentStep--;
-            this.updateStep();
-        }
-    }
-
-    updateStep() {
-        this.steps.forEach((step, idx) => {
-            step.classList.toggle('active', idx === this.currentStep);
-        });
-        document.querySelectorAll('.step-dot').forEach((dot, idx) => {
-            dot.classList.toggle('active', idx === this.currentStep);
-        });
-        this.prevBtn && (this.prevBtn.disabled = this.currentStep === 0);
-        this.nextBtn && (this.nextBtn.disabled = (this.currentStep === this.steps.length - 1) || (this.currentStep === 0 && !this.baseOption));
-        this.calculateBtn && (this.calculateBtn.disabled = this.currentStep !== this.steps.length - 1 || !this.contract.duration);
-    }
-
-    updatePriceSummary() {
-        // Add-ons Preis
-        let addonsPrice = 0;
-        this.addons.forEach(addon => {
-            const card = document.querySelector(`.addon-card[data-addon="${addon}"]`);
-            if (card) addonsPrice += parseInt(card.dataset.price, 10) || 0;
-        });
-        this.prices.addons = addonsPrice;
-
-        // Support Preis (optional)
-        const supportSelect = document.querySelector('select[name="support"]');
-        const supportOption = supportSelect ? supportSelect.selectedOptions[0] : null;
-        this.prices.support = supportOption ? parseInt(supportOption.dataset.price, 10) || 0 : 0;
-
-        // Modifiers für Unternehmensgröße und Standorte
-        let modifier = 1;
-        const companySizeSelect = document.querySelector('select[name="company-size"]');
-        const companySizeMod = companySizeSelect ? parseFloat(companySizeSelect.selectedOptions[0].dataset.modifier) || 0 : 0;
-        modifier += companySizeMod;
-
-        const locationsSelect = document.querySelector('select[name="locations"]');
-        const locationsMod = locationsSelect ? parseFloat(locationsSelect.selectedOptions[0].dataset.modifier) || 0 : 0;
-        modifier += locationsMod;
-
-        // Subtotal
-        this.prices.subtotal = Math.round((this.prices.base + this.prices.addons + this.prices.support) * modifier);
-
-        // Rabatt
-        this.prices.discount = this.contract.discount ? Math.round(this.prices.subtotal * this.contract.discount) : 0;
-
-        // Total
-        this.prices.total = this.prices.subtotal - this.prices.discount;
-
-        // Setup Fee mit Modifier
-        this.prices.setup = Math.round(2500 * modifier);
-
-        // DOM aktualisieren
-        this.setText('.base-price', this.prices.base + '€');
-        this.setText('.addons-price', this.prices.addons + '€');
-        this.setText('.support-price', this.prices.support + '€');
-        this.setText('.subtotal-price', this.prices.subtotal + '€');
-        this.setText('.discount-price', '-' + this.prices.discount + '€');
-        this.setText('.total-price', this.prices.total + '€');
-        this.setText('.setup-price', this.prices.setup + '€');
-
-        // Rabattzeile ein-/ausblenden
-        const discountLine = document.querySelector('.price-line.discount');
-        if (discountLine) discountLine.style.display = this.prices.discount > 0 ? 'flex' : 'none';
-    }
-
-    setText(selector, text) {
-        const el = document.querySelector(selector);
-        if (el) el.textContent = text;
-    }
-
-    updateSelectedItems() {
-        if (!this.selectedItems) return;
-        let html = '';
-        // Basis
-        if (this.baseOption) {
-            const card = document.querySelector(`.option-card[data-service="${this.baseOption}"]`);
-            if (card) {
-                html += `<div class="item"><span>${card.querySelector('h4').textContent}</span><span>${card.dataset.price}€</span></div>`;
-            }
-        }
-        // Add-ons
-        this.addons.forEach(addon => {
-            const card = document.querySelector(`.addon-card[data-addon="${addon}"]`);
-            if (card) {
-                html += `<div class="item"><span>${card.querySelector('h4').textContent}</span><span>+${card.dataset.price}€</span></div>`;
-            }
-        });
-        // Support
-        const supportSelect = document.querySelector('select[name="support"]');
-        const supportOption = supportSelect ? supportSelect.selectedOptions[0] : null;
-        if (supportOption && parseInt(supportOption.dataset.price, 10) > 0) {
-            html += `<div class="item"><span>${supportOption.textContent}</span><span>+${supportOption.dataset.price}€</span></div>`;
-        }
-        // Vertragslaufzeit
-        if (this.contract.duration) {
-            let label = '';
-            if (this.contract.duration === 'monthly') label = 'Monatlich';
-            if (this.contract.duration === 'annual') label = 'Jährlich';
-            if (this.contract.duration === 'biannual') label = '2 Jahre';
-            html += `<div class="item"><span>Vertragslaufzeit</span><span>${label}</span></div>`;
-        }
-        this.selectedItems.innerHTML = html;
-    }
-
-    generateQuote() {
-        const quoteData = {
-            base: this.baseOption,
-            addons: this.addons,
-            details: this.details,
-            contract: this.contract,
-            prices: this.prices,
-            total: this.prices.total,
-            setup: this.prices.setup,
-            timestamp: new Date().toISOString()
-        };
-
-        // Schreibe Daten ins Kontaktformular, falls Feld existiert
-        const hiddenField = document.getElementById('calculator-data');
-        if (hiddenField) {
-            hiddenField.value = JSON.stringify(quoteData);
-        }
-
-        // Kontaktformular anzeigen und Fokus setzen
-        const contactForm = document.querySelector('.contact-form');
-        if (contactForm) {
-            contactForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            const firstInput = contactForm.querySelector('input, textarea, select');
-            firstInput?.focus();
-        }
-    }
-}
-
-// Kalkulator initialisieren, wenn DOM bereit
-document.addEventListener('DOMContentLoaded', () => {
-    const calculatorSection = document.querySelector('.calculator-section');
-    if (calculatorSection) {
-        const calculator = new PriceCalculator();
-        calculator.init();
-    }
-    // ...weitere Initialisierungen...
-});
+                            img.onload = () => {
+                                img.classList.add('loaded');
+                           

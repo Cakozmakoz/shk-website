@@ -1,5 +1,31 @@
 import nodemailer from 'nodemailer';
 
+function formatCalculatorData(data) {
+    try {
+        const calc = JSON.parse(data);
+        return `
+GEWÄHLTES PAKET:
+• ${calc.base === 'basic-website' ? 'Basic Website' : 
+    calc.base === 'professional-website' ? 'Professional Website' : 
+    calc.base === 'enterprise-website' ? 'Enterprise Website' : calc.base}
+
+ZUSATZMODULE:
+${calc.addons.map(addon => '• ' + (
+    addon === 'ai-integration' ? 'KI-Integration' :
+    addon === 'booking-system' ? 'Online Terminbuchung' :
+    addon === 'crm-integration' ? 'CRM & Analytics' :
+    addon === 'whatsapp-business' ? 'WhatsApp Business' :
+    addon === 'multilingual' ? 'Mehrsprachigkeit' :
+    addon === 'workflow-automation' ? 'Workflow Automatisierung' : 
+    addon
+)).join('\n')}
+`;
+    } catch (error) {
+        console.error('Error parsing calculator data:', error);
+        return 'Fehler beim Verarbeiten der Kalkulator-Daten.';
+    }
+}
+
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     // Die Formulardaten auslesen
@@ -38,7 +64,7 @@ E-Mail: ${email}
 Nachricht: ${message}
 
 Kalkulator-Daten:
-${calculatorData}
+${formatCalculatorData(calculatorData)}
       `
     };
 

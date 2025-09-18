@@ -4,25 +4,58 @@ function formatCalculatorData(data) {
     try {
         const calc = JSON.parse(data);
         return `
+Hallo Chef,
+
+Eine neue Anfrage ist eingegangen:
+
+KONTAKTDATEN:
+• Name: ${name}
+• E-Mail: ${email}
+• Nachricht: ${message}
+
 GEWÄHLTES PAKET:
-• ${calc.base === 'basic-website' ? 'Basic Website' : 
-    calc.base === 'professional-website' ? 'Professional Website' : 
-    calc.base === 'enterprise-website' ? 'Enterprise Website' : calc.base}
+• ${calc.base === 'basic-website' ? 'Basic Website (399€/Monat)' : 
+    calc.base === 'professional-website' ? 'Professional Website (599€/Monat)' : 
+    calc.base === 'enterprise-website' ? 'Enterprise Website (999€/Monat)' : calc.base}
 
 ZUSATZMODULE:
 ${calc.addons.map(addon => '• ' + (
-    addon === 'ai-integration' ? 'KI-Integration' :
-    addon === 'booking-system' ? 'Online Terminbuchung' :
-    addon === 'crm-integration' ? 'CRM & Analytics' :
-    addon === 'whatsapp-business' ? 'WhatsApp Business' :
-    addon === 'multilingual' ? 'Mehrsprachigkeit' :
-    addon === 'workflow-automation' ? 'Workflow Automatisierung' : 
+    addon === 'ai-integration' ? 'KI-Integration (+299€/Monat)' :
+    addon === 'booking-system' ? 'Online Terminbuchung (+199€/Monat)' :
+    addon === 'crm-integration' ? 'CRM & Analytics (+249€/Monat)' :
+    addon === 'whatsapp-business' ? 'WhatsApp Business (+99€/Monat)' :
+    addon === 'multilingual' ? 'Mehrsprachigkeit (+149€/Monat)' :
+    addon === 'workflow-automation' ? 'Workflow Automatisierung (+399€/Monat)' : 
     addon
 )).join('\n')}
+
+VERTRAGSINFORMATIONEN:
+• Laufzeit: ${calc.contract.duration === 'monthly' ? 'Monatlich' :
+            calc.contract.duration === 'annual' ? 'Jährlich (10% Rabatt)' :
+            calc.contract.duration === 'biannual' ? '2 Jahre (15% Rabatt)' : 
+            calc.contract.duration}
+
+PREISÜBERSICHT:
+• Basis-Paket: ${calc.prices.base}€/Monat
+• Zusatzmodule: ${calc.prices.addons}€/Monat
+• Support: ${calc.prices.support}€/Monat
+• Zwischensumme: ${calc.prices.subtotal}€/Monat
+${calc.prices.discount > 0 ? `• Rabatt: -${calc.prices.discount}€/Monat` : ''}
+• Monatlicher Gesamtpreis: ${calc.prices.total}€
+• Einmalige Setup-Gebühr: ${calc.prices.setup}€
+
+Datum der Anfrage: ${new Date(calc.timestamp).toLocaleString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+})} Uhr
+
+Erfolgreichen Tag Dir!
 `;
-    } catch (error) {
-        console.error('Error parsing calculator data:', error);
-        return 'Fehler beim Verarbeiten der Kalkulator-Daten.';
+    } catch (e) {
+        return 'Fehler beim Parsen der Kalkulator-Daten';
     }
 }
 
@@ -32,7 +65,7 @@ export default async function handler(req, res) {
     let body = '';
     await new Promise((resolve) => {
       req.on('data', chunk => { body += chunk; });
-      req.on('end', resolve);
+      req.on('end', resolve);a
     });
 
     // Die Daten parsen (URL-encoded)

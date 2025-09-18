@@ -1,9 +1,31 @@
 import nodemailer from 'nodemailer';
 
-function formatCalculatorData(data) {
+export default async function handler(req, res) {
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
     try {
-        const calc = JSON.parse(data);
-        return `
+        // Formulardaten aus dem Request-Body extrahieren
+        const body = JSON.parse(JSON.stringify(req.body));
+        const { name, email, message, 'calculator-data': calculatorData } = body;
+
+        // E-Mail-Transport konfigurieren
+        const transporter = nodemailer.createTransport({
+            host: 'smtp.gmail.com',
+            port: 587,
+            secure: false,
+            auth: {
+                user: 'clgunduz@gmail.com',
+                pass: process.env.GMAIL_PASSWORD
+            }
+        });
+
+        // E-Mail-Text formatieren
+        function formatCalculatorData(data) {
+            try {
+                const calc = JSON.parse(data);
+                return `
 Hallo Chef,
 
 Eine neue Anfrage ist eingegangen:
@@ -52,62 +74,31 @@ Datum der Anfrage: ${new Date(calc.timestamp).toLocaleString('de-DE', {
     minute: '2-digit'
 })} Uhr
 
-Erfolgreichen Tag Dir!
-`;
-    } catch (e) {
-        return 'Fehler beim Parsen der Kalkulator-Daten';
-    }
-}
+Erfolgreichen Tag Dir!`;
+            } catch (e) {
+                return 'Keine Kalkulator-Daten verfügbar';
+            }
+        }
 
-export default async function handler(req, res) {
-  if (req.method === 'POST') {
-    // Die Formulardaten auslesen
-    let body = '';
-    await new Promise((resolve) => {
-      req.on('data', chunk => { body += chunk; });
-      req.on('end', resolve);a
-    });
+        // E-Mail senden
+        await transporter.sendMail({
+            from: 'clgunduz@gmail.com',
+            to: 'clgunduz@gmail.com',
+            subject: 'Neue SHK Website-Anfrage',
+            text: formatCalculatorData(calculatorData)
+        });
 
-    // Die Daten parsen (URL-encoded)
-    const params = new URLSearchParams(body);
-    const calculatorData = params.get('calculator-data');
-    const name = params.get('name');
-    const email = params.get('email');
-    const message = params.get('message');
+        // Erfolgreiche Antwort
+        return res.status(200).json({
+            success: true,
+            message: 'Formular erfolgreich empfangen und E-Mail versendet. Wir melden uns innerhalb von 48 Stunden'
+        });
 
-    // Transporter konfigurieren
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
-      auth: {
-        user: 'clgunduz@gmail.com',
-        pass: process.env.GMAIL_PASSWORD // Hier dein App-Passwort als Umgebungsvariable
-      }
-    });
-
-    // E-Mail-Inhalt
-    const mailOptions = {
-      from: 'clgunduz@gmail.com',
-      to: 'clgunduz@gmail.com',
-      subject: 'Neue SHK Anfrage von Website',
-      text: `
-Name: ${name}
-E-Mail: ${email}
-Nachricht: ${message}
-
-Kalkulator-Daten:
-${formatCalculatorData(calculatorData)}
-      `
-    };
-
-    try {
-      await transporter.sendMail(mailOptions);
-      res.status(200).json({ success: true, message: 'Formular erfolgreich empfangen und E-Mail versendet. Wir melden uns innerhalb von 48 Stunden' });
     } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
+        console.error('Fehler beim Verarbeiten der Anfrage:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Interner Server-Fehler beim Verarbeiten der Anfrage'
+        });
     }
-  } else {
-    res.status(405).json({ error: 'Method not allowed' });
-  }
 }

@@ -19,17 +19,17 @@ export default async function handler(req, res) {
 
     // Transporter konfigurieren (z. B. Gmail SMTP)
     const transporter = nodemailer.createTransport({
-      service: 'proton',
+      service: 'gmail',
       auth: {
-        user: 'cafer.guenduez@proton.me',
-        pass: 'Makoz-2024!' // Nutze ein App-Passwort, nicht dein normales Gmail-Passwort!
+        user: 'clgunduz@gmail.com',
+        pass: 'Mac-2018!' // Nutze ein App-Passwort, nicht dein normales Gmail-Passwort!
       }
     });
 
     // E-Mail-Inhalt
     const mailOptions = {
-      from: 'cafer.guenduez@proton.me',
-      to: 'cafer.guenduez@proton.me',
+      from: 'clgunduz@gmail.com',
+      to: 'clgunduz@gmail.com',
       subject: 'Neue SHK Anfrage von Website',
       text: `
 Name: ${name}

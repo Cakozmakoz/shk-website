@@ -725,693 +725,468 @@ class DigitalCraftWebsite {
                         const img = entry.target;
                         if (img.dataset.src) {
                             img.src = img.dataset.src;
-                            img.removeAttribute('data-src');
-                            imageObserver.unobserve(img);
+                            img.onload = () => img.classList.add('loaded');
                         }
                     }
                 });
             });
 
-            document.querySelectorAll('img[data-src]').forEach(img => {
+            const images = document.querySelectorAll('img[data-src]');
+            images.forEach(img => {
                 imageObserver.observe(img);
             });
         }
 
-        // Preconnect to external domains
-        this.addPreconnectLinks([
-            'https://fonts.googleapis.com',
-            'https://fonts.gstatic.com'
-        ]);
+        // Optimize font loading
+        const fontPreload = document.createElement('link');
+        fontPreload.rel = 'preload';
+        fontPreload.href = '/fonts/your-font.woff2';
+        fontPreload.as = 'font';
+        fontPreload.crossOrigin = 'anonymous';
+        document.head.appendChild(fontPreload);
+
+        // Reduce JavaScript execution time
+        this.reduceJavaScriptExecutionTime();
     }
 
-    addPreconnectLinks(domains) {
-        domains.forEach(domain => {
-            if (!document.querySelector(`link[href="${domain}"]`)) {
-                const link = document.createElement('link');
-                link.rel = 'preconnect';
-                link.href = domain;
-                document.head.appendChild(link);
-            }
+    reduceJavaScriptExecutionTime() {
+        // Split code into smaller chunks and load asynchronously
+        const scriptChunks = [
+            '/js/chunk-vendors.js',
+            '/js/app.js'
+        ];
+
+        scriptChunks.forEach(src => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.async = true;
+            document.body.appendChild(script);
         });
     }
 
-    optimizeImages() {
-        const images = document.querySelectorAll('img');
-        images.forEach(img => {
-            if (!img.alt) {
-                console.warn('Image missing alt text:', img.src);
-            }
-        });
-    }
+    // Price Calculator specific methods
+    setupPriceCalculator() {
+        const calculatorForm = document.getElementById('price-calculator-form');
+        if (!calculatorForm) return;
 
-    // Analytics (only if cookies accepted)
-    initializeAnalytics() {
-        if (this.getCookie('cookies-accepted') === 'true') {
-            this.initializeTrackingCookies();
-        }
-    }
+        const baseOptions = calculatorForm.querySelectorAll('input[name="base-option"]');
+        const addonOptions = calculatorForm.querySelectorAll('input[name^="addon-"]');
+        const detailFields = calculatorForm.querySelectorAll('input[name^="detail-"], textarea[name^="detail-"]');
+        const contractSelect = calculatorForm.querySelector('select[name="contract"]');
+        const resultSection = document.getElementById('price-calculator-results');
 
-    initializeTrackingCookies() {
-        // Initialize Google Analytics or other tracking
-        console.log('Analytics initialized');
-        
-        // Track page view
-        this.trackEvent('page_view', {
-            page_title: document.title,
-            page_location: window.location.href
-        });
-    }
-
-    trackEvent(eventName, parameters = {}) {
-        if (this.getCookie('cookies-accepted') === 'true') {
-            console.log('Event tracked:', eventName, parameters);
-            
-            // Example for Google Analytics 4
-            if (typeof gtag !== 'undefined') {
-                gtag('event', eventName, parameters);
-            }
-        }
-    }
-
-    hideLoadingSpinner() {
-        const spinner = document.querySelector('.loading-spinner');
-        if (spinner) {
-            spinner.style.opacity = '0';
-            setTimeout(() => spinner.remove(), 300);
-        }
-    }
-
-    updateCopyrightYear() {
-        const yearElements = document.querySelectorAll('.current-year');
-        const currentYear = new Date().getFullYear();
-        yearElements.forEach(element => {
-            element.textContent = currentYear.toString();
-        });
-    }
-}
-
-// Preiskalkulator Klasse - KOMPLETT KORRIGIERT
-class PriceCalculator {
-    constructor() {
-        this.currentStep = 1;
-        this.totalSteps = 4;
-        this.selectedBase = null;
-        this.selectedAddons = [];
-        this.selectedDetails = {};
-        this.selectedContract = null;
-        this.prices = {
-            base: 0,
-            addons: 0,
-            support: 0,
-            setup: 2500
+        let state = {
+            baseOption: '',
+            addons: {},
+            details: {},
+            contract: '',
+            prices: {}
         };
-        this.init();
+
+        // Initialize state from localStorage
+        this.loadPriceCalculatorState(state);
+
+        // Base options change
+        baseOptions.forEach(option => {
+            option.addEventListener('change', (e) => {
+                const value = e.target.value;
+                state.baseOption = value;
+                this.updatePriceCalculatorResults(state, resultSection);
+                
+                // Track event
+                this.trackEvent('price_calculator_base_change', { base_option: value });
+            });
+        });
+
+        // Addon options change
+        addonOptions.forEach(option => {
+            option.addEventListener('change', (e) => {
+                const name = e.target.name;
+                const value = e.target.checked;
+                state.addons[name] = value;
+                this.updatePriceCalculatorResults(state, resultSection);
+                
+                // Track event
+                this.trackEvent('price_calculator_addon_change', { addon: name, enabled: value });
+            });
+        });
+
+        // Detail fields change
+        detailFields.forEach(field => {
+            field.addEventListener('input', (e) => {
+                const name = e.target.name;
+                const value = e.target.value;
+                state.details[name] = value;
+                this.updatePriceCalculatorResults(state, resultSection);
+            });
+        });
+
+        // Contract type change
+        contractSelect.addEventListener('change', (e) => {
+            const value = e.target.value;
+            state.contract = value;
+            this.updatePriceCalculatorResults(state, resultSection);
+        });
+
+        // Generate quote button
+        const generateQuoteBtn = document.getElementById('generate-quote');
+        generateQuoteBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.generateQuote(state);
+        });
+
+        // Update results on load
+        this.updatePriceCalculatorResults(state, resultSection);
     }
 
-    init() {
-        // Warte kurz, bis DOM vollständig geladen ist
-        setTimeout(() => {
-            this.bindEvents();
-            this.updateNavigation();
-            this.updatePriceSummary();
-        }, 100);
-    }
+    updatePriceCalculatorResults(state, resultSection) {
+        const { baseOption, addons, details, contract, prices } = state;
 
-    bindEvents() {
-        // Option Cards - Event Delegation für bessere Performance
-        const optionsGrid = document.querySelector('.options-grid');
-        if (optionsGrid) {
-            optionsGrid.addEventListener('click', (e) => {
-                const button = e.target.closest('.option-btn');
-                if (button) {
-                    e.preventDefault();
-                    const card = button.closest('.option-card');
-                    if (card) {
-                        this.selectBaseOption(card);
-                    }
+        // Calculate prices based on options selected
+        let total = 0;
+        let setup = 0;
+
+        // Base option price
+        if (baseOption === 'option1') {
+            total += 399;
+            setup += 99;
+        } else if (baseOption === 'option2') {
+            total += 599;
+            setup += 149;
+        } else if (baseOption === 'option3') {
+            total += 799;
+            setup += 199;
+        }
+
+        // Addon prices
+        Object.keys(addons).forEach(addon => {
+            if (addons[addon]) {
+                if (addon === 'addon1') {
+                    total += 49;
+                } else if (addon === 'addon2') {
+                    total += 99;
+                } else if (addon === 'addon3') {
+                    total += 199;
                 }
-            });
-        }
-
-        // Add-on Toggles
-        document.querySelectorAll('.addon-card input[type="checkbox"]').forEach(toggle => {
-            toggle.addEventListener('change', (e) => {
-                const card = e.target.closest('.addon-card');
-                if (card) {
-                    this.toggleAddon(card);
-                }
-            });
-        });
-
-        // Details Selects
-        document.querySelectorAll('.detail-group select').forEach(select => {
-            select.addEventListener('change', () => {
-                this.updateDetail(select.name, select.value, select);
-            });
-        });
-
-        // Contract Cards
-        const contractOptions = document.querySelector('.contract-options');
-        if (contractOptions) {
-            contractOptions.addEventListener('click', (e) => {
-                const card = e.target.closest('.contract-card');
-                if (card) {
-                    this.selectContract(card);
-                }
-            });
-        }
-
-        // Navigation Buttons
-        const prevBtn = document.querySelector('.calculator-navigation .prev-btn');
-        const nextBtn = document.querySelector('.calculator-navigation .next-btn');
-        
-        if (prevBtn) {
-            prevBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.previousStep();
-            });
-        }
-
-        if (nextBtn) {
-            nextBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.nextStep();
-            });
-        }
-
-        // Calculate Button
-        const calculateBtn = document.querySelector('.calculate-btn');
-        if (calculateBtn) {
-            calculateBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.generateQuote();
-            });
-        }
-    }
-
-    selectBaseOption(card) {
-        // Deselect all cards
-        document.querySelectorAll('.option-card').forEach(c => {
-            c.classList.remove('selected');
-            const btn = c.querySelector('.option-btn');
-            if (btn) btn.textContent = 'Auswählen';
-        });
-        
-        // Select clicked card
-        card.classList.add('selected');
-        const btn = card.querySelector('.option-btn');
-        if (btn) btn.textContent = 'Ausgewählt';
-        
-        // Store selection
-        this.selectedBase = {
-            service: card.dataset.service,
-            price: parseInt(card.dataset.price) || 0,
-            name: card.querySelector('h4')?.textContent || 'Unbekannt'
-        };
-
-        this.prices.base = this.selectedBase.price;
-        
-        // Update UI
-        this.updatePriceSummary();
-        this.updateNavigation();
-    }
-
-    toggleAddon(card) {
-        const checkbox = card.querySelector('input[type="checkbox"]');
-        if (!checkbox) return;
-
-        const addonData = {
-            addon: card.dataset.addon,
-            price: parseInt(card.dataset.price) || 0,
-            name: card.querySelector('h4')?.textContent || 'Unbekannt'
-        };
-
-        if (checkbox.checked) {
-            card.classList.add('selected');
-            this.selectedAddons.push(addonData);
-        } else {
-            card.classList.remove('selected');
-            this.selectedAddons = this.selectedAddons.filter(a => a.addon !== addonData.addon);
-        }
-
-        // Calculate total addons price
-        this.prices.addons = this.selectedAddons.reduce((sum, addon) => sum + addon.price, 0);
-        
-        this.updatePriceSummary();
-    }
-
-    updateDetail(name, value, selectElement) {
-        this.selectedDetails[name] = value;
-
-        // Handle support price
-        if (name === 'support') {
-            const selectedOption = selectElement.querySelector(`option[value="${value}"]`);
-            if (selectedOption) {
-                this.prices.support = parseInt(selectedOption.dataset.price) || 0;
-            }
-        }
-
-        // Update setup fee
-        this.calculateSetupFee();
-        this.updatePriceSummary();
-        this.updateNavigation();
-    }
-
-    selectContract(card) {
-        // Deselect all contracts
-        document.querySelectorAll('.contract-card').forEach(c => {
-            c.classList.remove('selected');
-        });
-        
-        // Select clicked contract
-        card.classList.add('selected');
-        
-        this.selectedContract = {
-            duration: card.dataset.duration,
-            discount: parseFloat(card.dataset.discount) || 0,
-            name: card.querySelector('h4')?.textContent || 'Unbekannt'
-        };
-
-        this.updatePriceSummary();
-        this.updateNavigation();
-    }
-
-    calculateSetupFee() {
-        let setupFee = 2500;
-
-        // Company size modifier
-        const companySize = this.selectedDetails['company-size'];
-        if (companySize === 'medium') {
-            setupFee += 1000;
-        } else if (companySize === 'large') {
-            setupFee += 2500;
-        }
-
-        // Locations modifier
-        const locations = this.selectedDetails['locations'];
-        if (locations === '2-3') {
-            setupFee += 1500;
-        } else if (locations === '4+') {
-            setupFee += 3000;
-        }
-
-        this.prices.setup = setupFee;
-    }
-
-    updatePriceSummary() {
-        const subtotal = this.prices.base + this.prices.addons + this.prices.support;
-        const discount = this.selectedContract?.discount || 0;
-        const discountAmount = Math.round(subtotal * discount);
-        const total = subtotal - discountAmount;
-
-        // Update all price displays
-        this.updatePriceElement('.base-price', `${this.prices.base}€`);
-        this.updatePriceElement('.addons-price', `${this.prices.addons}€`);
-        this.updatePriceElement('.support-price', `${this.prices.support}€`);
-        this.updatePriceElement('.subtotal-price', `${subtotal}€`);
-        this.updatePriceElement('.total-price', `${total}€`);
-        this.updatePriceElement('.setup-price', `${this.prices.setup}€`);
-
-        // Handle discount display
-        const discountLine = document.querySelector('.price-line.discount');
-        if (discountLine) {
-            if (discount > 0) {
-                discountLine.style.display = 'flex';
-                this.updatePriceElement('.discount-price', `-${discountAmount}€`);
-            } else {
-                discountLine.style.display = 'none';
-            }
-        }
-
-        // Update selected items list
-        this.updateSelectedItems();
-    }
-
-    updatePriceElement(selector, value) {
-        const element = document.querySelector(selector);
-        if (element) {
-            element.textContent = value;
-        }
-    }
-
-    updateSelectedItems() {
-        const container = document.querySelector('.selected-items');
-        if (!container) return;
-        
-        container.innerHTML = '';
-
-        // Add base package
-        if (this.selectedBase) {
-            container.innerHTML += `
-                <div class="item">
-                    <span>${this.selectedBase.name}</span>
-                    <span>${this.selectedBase.price}€</span>
-                </div>
-            `;
-        }
-
-        // Add selected addons
-        this.selectedAddons.forEach(addon => {
-            container.innerHTML += `
-                <div class="item">
-                    <span>${addon.name}</span>
-                    <span>+${addon.price}€</span>
-                </div>
-            `;
-        });
-
-        // Add support if selected
-        if (this.prices.support > 0 && this.selectedDetails.support) {
-            const supportText = {
-                'email': 'E-Mail Support',
-                'phone': 'Telefon Support',
-                'priority': 'Priority Support'
-            };
-            container.innerHTML += `
-                <div class="item">
-                    <span>${supportText[this.selectedDetails.support] || 'Support'}</span>
-                    <span>+${this.prices.support}€</span>
-                </div>
-            `;
-        }
-
-        // Add contract info
-        if (this.selectedContract) {
-            const discountText = this.selectedContract.discount > 0 
-                ? `${this.selectedContract.discount * 100}% Rabatt` 
-                : '';
-            container.innerHTML += `
-                <div class="item">
-                    <span>Laufzeit: ${this.selectedContract.name}</span>
-                    <span>${discountText}</span>
-                </div>
-            `;
-        }
-    }
-
-    showStep(stepNumber) {
-        // Hide all steps
-        document.querySelectorAll('.calculator-step').forEach(step => {
-            step.classList.remove('active');
-        });
-
-        // Show current step
-        const currentStepElement = document.querySelector(`[data-step="${stepNumber}"]`);
-        if (currentStepElement) {
-            currentStepElement.classList.add('active');
-        }
-
-        // Update step indicators
-        document.querySelectorAll('.step-dot').forEach((dot, index) => {
-            dot.classList.remove('active', 'completed');
-            if (index + 1 < stepNumber) {
-                dot.classList.add('completed');
-            } else if (index + 1 === stepNumber) {
-                dot.classList.add('active');
             }
         });
 
-        // Update current step
-        this.currentStep = stepNumber;
+        // Contract discounts
+        if (contract === '12months') {
+            total *= 0.9; // 10% discount
+        } else if (contract === '24months') {
+            total *= 0.85; // 15% discount
+        }
+
+        // Update state
+        state.prices = { total, setup };
+
+        // Display results
+        resultSection.querySelector('.price-total').textContent = `€${total.toFixed(2)}`;
+        resultSection.querySelector('.price-setup').textContent = `€${setup.toFixed(2)}`;
     }
 
-    nextStep() {
-        if (this.currentStep < this.totalSteps && this.canProceed()) {
-            this.showStep(this.currentStep + 1);
-            this.updateNavigation();
-        }
-    }
-
-    previousStep() {
-        if (this.currentStep > 1) {
-            this.showStep(this.currentStep - 1);
-            this.updateNavigation();
-        }
-    }
-
-    canProceed() {
-        switch (this.currentStep) {
-            case 1:
-                return this.selectedBase !== null;
-            case 2:
-                return true; // Add-ons are optional
-            case 3:
-                // At least 2 details should be selected
-                return Object.keys(this.selectedDetails).length >= 2;
-            case 4:
-                return this.selectedContract !== null;
-            default:
-                return false;
-        }
-    }
-
-    updateNavigation() {
-        const prevBtn = document.querySelector('.prev-btn');
-        const nextBtn = document.querySelector('.next-btn');
-        const calculateBtn = document.querySelector('.calculate-btn');
-
-        // Previous button
-        if (prevBtn) {
-            prevBtn.disabled = this.currentStep === 1;
-        }
-
-        // Next button
-        if (nextBtn) {
-            if (this.currentStep === this.totalSteps) {
-                nextBtn.style.display = 'none';
-            } else {
-                nextBtn.style.display = 'block';
-                nextBtn.disabled = !this.canProceed();
-            }
-        }
-
-        // Calculate button
-        if (calculateBtn) {
-            const isComplete = this.selectedBase && this.selectedContract;
-            calculateBtn.disabled = !isComplete;
-        }
-    }
-
-    generateQuote() {
-        const subtotal = this.prices.base + this.prices.addons + this.prices.support;
-        const discount = this.selectedContract?.discount || 0;
-        const total = subtotal - (subtotal * discount);
+    generateQuote(state) {
+        const { baseOption, addons, details, contract, prices } = state;
 
         const quoteData = {
-            base: this.selectedBase,
-            addons: this.selectedAddons,
-            details: this.selectedDetails,
-            contract: this.selectedContract,
-            prices: this.prices,
-            total: Math.round(total),
+            base: baseOption,
+            addons: addons,
+            details: details,
+            contract: contract,
+            prices: prices,
+            total: prices.total,
+            setup: prices.setup,
             timestamp: new Date().toISOString()
         };
 
         // Save to localStorage
         localStorage.setItem('priceCalculatorQuote', JSON.stringify(quoteData));
 
-        // Track event
-        if (window.digitalCraft) {
-            window.digitalCraft.trackEvent('price_calculator_completed', {
-                base_package: this.selectedBase?.service,
-                total_monthly: quoteData.total,
-                addons_count: this.selectedAddons.length
-            });
+        // Schreibe Daten ins Kontaktformular, falls Feld existiert
+        const hiddenField = document.getElementById('calculator-data');
+        if (hiddenField) {
+            hiddenField.value = JSON.stringify(quoteData);
         }
 
-        // Show quote modal
-        this.showQuoteModal(quoteData);
+        // Kontaktformular anzeigen und Fokus setzen
+        const contactForm = document.querySelector('.contact-form');
+        if (contactForm) {
+            contactForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const firstInput = contactForm.querySelector('input, textarea, select');
+            firstInput?.focus();
+        }
     }
 
-    showQuoteModal(quoteData) {
-        // Remove existing modal if any
-        const existingModal = document.querySelector('.quote-modal');
-        if (existingModal) {
-            existingModal.remove();
+    loadPriceCalculatorState(state) {
+        const savedState = JSON.parse(localStorage.getItem('priceCalculatorState'));
+        if (savedState) {
+            Object.assign(state, savedState);
         }
+    }
 
-        // Create modal
-        const modal = document.createElement('div');
-        modal.className = 'quote-modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Ihr individuelles Angebot</h2>
-                    <button class="modal-close">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <div class="quote-summary">
-                        <h3>${quoteData.base?.name || 'Ihr Paket'}</h3>
-                        <p>Monatlich: <strong>${quoteData.total}€</strong></p>
-                        <p>Setup-Gebühr: <strong>${quoteData.prices.setup}€</strong></p>
-                        <p>Laufzeit: <strong>${quoteData.contract?.name || 'Flexibel'}</strong></p>
-                    </div>
-                    <div class="modal-actions">
-                        <button class="btn btn-primary" onclick="scrollToSection('contact'); document.querySelector('.quote-modal').remove();">
-                            Jetzt Angebot anfordern
-                        </button>
-                        <button class="btn btn-secondary" onclick="document.querySelector('.quote-modal').remove()">
-                            Weiter konfigurieren
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
+    savePriceCalculatorState(state) {
+        localStorage.setItem('priceCalculatorState', JSON.stringify(state));
+    }
+}
 
-        document.body.appendChild(modal);
+// Initialisierung der Website-Klasse
+document.addEventListener('DOMContentLoaded', () => {
+    const website = new DigitalCraftWebsite();
+    website.setupPriceCalculator();
+});
 
-        // Bind close events
-        const closeBtn = modal.querySelector('.modal-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => modal.remove());
-        }
+class PriceCalculator {
+    constructor() {
+        this.baseOption = null;
+        this.addons = [];
+        this.details = {};
+        this.contract = { duration: null, discount: 0 };
+        this.prices = {
+            base: 0,
+            addons: 0,
+            support: 0,
+            subtotal: 0,
+            discount: 0,
+            total: 0,
+            setup: 2500
+        };
+        this.currentStep = 0;
+        this.steps = [];
+        this.summary = null;
+        this.selectedItems = null;
+        this.calculateBtn = null;
+        this.nextBtn = null;
+        this.prevBtn = null;
+    }
 
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.remove();
+    init() {
+        this.steps = Array.from(document.querySelectorAll('.calculator-step'));
+        this.summary = document.querySelector('.price-summary');
+        this.selectedItems = document.querySelector('.selected-items');
+        this.calculateBtn = document.querySelector('.calculate-btn');
+        this.nextBtn = document.querySelector('.next-btn');
+        this.prevBtn = document.querySelector('.prev-btn');
+        this.setupEventListeners();
+        this.updateStep();
+        this.updatePriceSummary();
+    }
+
+    setupEventListeners() {
+        // Basisoptionen (Cards oder Buttons)
+        document.querySelectorAll('.option-card, .option-btn').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                this.baseOption = card.dataset.service || card.value;
+                this.prices.base = parseInt(card.dataset.price, 10) || 0;
+                this.updatePriceSummary();
+                this.updateSelectedItems();
+                this.nextBtn && (this.nextBtn.disabled = false);
+            });
+        });
+
+        // Add-ons (Checkboxen in Cards)
+        document.querySelectorAll('.addon-card input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', () => {
+                const card = checkbox.closest('.addon-card');
+                const addon = card.dataset.addon;
+                if (checkbox.checked) {
+                    if (!this.addons.includes(addon)) this.addons.push(addon);
+                } else {
+                    this.addons = this.addons.filter(a => a !== addon);
+                }
+                this.updatePriceSummary();
+                this.updateSelectedItems();
+            });
+        });
+
+        // Details (Selects)
+        document.querySelectorAll('.details-grid select').forEach(select => {
+            select.addEventListener('change', () => {
+                this.details[select.name] = select.value;
+                this.updatePriceSummary();
+                this.updateSelectedItems();
+            });
+        });
+
+        // Vertragslaufzeit (Cards)
+        document.querySelectorAll('.contract-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.contract-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                this.contract.duration = card.dataset.duration;
+                this.contract.discount = parseFloat(card.dataset.discount) || 0;
+                this.updatePriceSummary();
+                this.updateSelectedItems();
+                this.calculateBtn && (this.calculateBtn.disabled = false);
+            });
+        });
+
+        // Navigation
+        this.nextBtn && this.nextBtn.addEventListener('click', () => this.nextStep());
+        this.prevBtn && this.prevBtn.addEventListener('click', () => this.prevStep());
+
+        // Angebot anfordern
+        this.calculateBtn && this.calculateBtn.addEventListener('click', () => {
+            if (!this.calculateBtn.disabled) {
+                this.generateQuote();
             }
         });
     }
-}
 
-// Global scroll function
-function scrollToSection(sectionId) {
-    const element = document.getElementById(sectionId);
-    if (element) {
-        const headerHeight = document.querySelector('.header')?.offsetHeight || 0;
-        const targetPosition = element.offsetTop - headerHeight - 20;
-        
-        window.scrollTo({
-            top: targetPosition,
-            behavior: 'smooth'
+    nextStep() {
+        if (this.currentStep < this.steps.length - 1) {
+            this.currentStep++;
+            this.updateStep();
+        }
+    }
+
+    prevStep() {
+        if (this.currentStep > 0) {
+            this.currentStep--;
+            this.updateStep();
+        }
+    }
+
+    updateStep() {
+        this.steps.forEach((step, idx) => {
+            step.classList.toggle('active', idx === this.currentStep);
         });
+        document.querySelectorAll('.step-dot').forEach((dot, idx) => {
+            dot.classList.toggle('active', idx === this.currentStep);
+        });
+        this.prevBtn && (this.prevBtn.disabled = this.currentStep === 0);
+        this.nextBtn && (this.nextBtn.disabled = (this.currentStep === this.steps.length - 1) || (this.currentStep === 0 && !this.baseOption));
+        this.calculateBtn && (this.calculateBtn.disabled = this.currentStep !== this.steps.length - 1 || !this.contract.duration);
+    }
 
-        // Track event
-        if (window.digitalCraft) {
-            window.digitalCraft.trackEvent('cta_click', { 
-                section: sectionId,
-                button_type: 'scroll_to_section'
-            });
+    updatePriceSummary() {
+        // Add-ons Preis
+        let addonsPrice = 0;
+        this.addons.forEach(addon => {
+            const card = document.querySelector(`.addon-card[data-addon="${addon}"]`);
+            if (card) addonsPrice += parseInt(card.dataset.price, 10) || 0;
+        });
+        this.prices.addons = addonsPrice;
+
+        // Support Preis (optional)
+        const supportSelect = document.querySelector('select[name="support"]');
+        const supportOption = supportSelect ? supportSelect.selectedOptions[0] : null;
+        this.prices.support = supportOption ? parseInt(supportOption.dataset.price, 10) || 0 : 0;
+
+        // Modifiers für Unternehmensgröße und Standorte
+        let modifier = 1;
+        const companySizeSelect = document.querySelector('select[name="company-size"]');
+        const companySizeMod = companySizeSelect ? parseFloat(companySizeSelect.selectedOptions[0].dataset.modifier) || 0 : 0;
+        modifier += companySizeMod;
+
+        const locationsSelect = document.querySelector('select[name="locations"]');
+        const locationsMod = locationsSelect ? parseFloat(locationsSelect.selectedOptions[0].dataset.modifier) || 0 : 0;
+        modifier += locationsMod;
+
+        // Subtotal
+        this.prices.subtotal = Math.round((this.prices.base + this.prices.addons + this.prices.support) * modifier);
+
+        // Rabatt
+        this.prices.discount = this.contract.discount ? Math.round(this.prices.subtotal * this.contract.discount) : 0;
+
+        // Total
+        this.prices.total = this.prices.subtotal - this.prices.discount;
+
+        // Setup Fee mit Modifier
+        this.prices.setup = Math.round(2500 * modifier);
+
+        // DOM aktualisieren
+        this.setText('.base-price', this.prices.base + '€');
+        this.setText('.addons-price', this.prices.addons + '€');
+        this.setText('.support-price', this.prices.support + '€');
+        this.setText('.subtotal-price', this.prices.subtotal + '€');
+        this.setText('.discount-price', '-' + this.prices.discount + '€');
+        this.setText('.total-price', this.prices.total + '€');
+        this.setText('.setup-price', this.prices.setup + '€');
+
+        // Rabattzeile ein-/ausblenden
+        const discountLine = document.querySelector('.price-line.discount');
+        if (discountLine) discountLine.style.display = this.prices.discount > 0 ? 'flex' : 'none';
+    }
+
+    setText(selector, text) {
+        const el = document.querySelector(selector);
+        if (el) el.textContent = text;
+    }
+
+    updateSelectedItems() {
+        if (!this.selectedItems) return;
+        let html = '';
+        // Basis
+        if (this.baseOption) {
+            const card = document.querySelector(`.option-card[data-service="${this.baseOption}"]`);
+            if (card) {
+                html += `<div class="item"><span>${card.querySelector('h4').textContent}</span><span>${card.dataset.price}€</span></div>`;
+            }
+        }
+        // Add-ons
+        this.addons.forEach(addon => {
+            const card = document.querySelector(`.addon-card[data-addon="${addon}"]`);
+            if (card) {
+                html += `<div class="item"><span>${card.querySelector('h4').textContent}</span><span>+${card.dataset.price}€</span></div>`;
+            }
+        });
+        // Support
+        const supportSelect = document.querySelector('select[name="support"]');
+        const supportOption = supportSelect ? supportSelect.selectedOptions[0] : null;
+        if (supportOption && parseInt(supportOption.dataset.price, 10) > 0) {
+            html += `<div class="item"><span>${supportOption.textContent}</span><span>+${supportOption.dataset.price}€</span></div>`;
+        }
+        // Vertragslaufzeit
+        if (this.contract.duration) {
+            let label = '';
+            if (this.contract.duration === 'monthly') label = 'Monatlich';
+            if (this.contract.duration === 'annual') label = 'Jährlich';
+            if (this.contract.duration === 'biannual') label = '2 Jahre';
+            html += `<div class="item"><span>Vertragslaufzeit</span><span>${label}</span></div>`;
+        }
+        this.selectedItems.innerHTML = html;
+    }
+
+    generateQuote() {
+        const quoteData = {
+            base: this.baseOption,
+            addons: this.addons,
+            details: this.details,
+            contract: this.contract,
+            prices: this.prices,
+            total: this.prices.total,
+            setup: this.prices.setup,
+            timestamp: new Date().toISOString()
+        };
+
+        // Save to localStorage
+        localStorage.setItem('priceCalculatorQuote', JSON.stringify(quoteData));
+
+        // Schreibe Daten ins Kontaktformular, falls Feld existiert
+        const hiddenField = document.getElementById('calculator-data');
+        if (hiddenField) {
+            hiddenField.value = JSON.stringify(quoteData);
+        }
+
+        // Kontaktformular anzeigen und Fokus setzen
+        const contactForm = document.querySelector('.contact-form');
+        if (contactForm) {
+            contactForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const firstInput = contactForm.querySelector('input, textarea, select');
+            firstInput?.focus();
         }
     }
 }
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        // Initialize main website
-        window.digitalCraft = new DigitalCraftWebsite();
-        
-        // Initialize price calculator if present
-        if (document.querySelector('.calculator-section')) {
-            window.priceCalculator = new PriceCalculator();
-        }
-    });
-} else {
-    // DOM already loaded
-    window.digitalCraft = new DigitalCraftWebsite();
-    
-    if (document.querySelector('.calculator-section')) {
-        window.priceCalculator = new PriceCalculator();
+// Kalkulator initialisieren, wenn DOM bereit
+document.addEventListener('DOMContentLoaded', () => {
+    const calculatorSection = document.querySelector('.calculator-section');
+    if (calculatorSection) {
+        const calculator = new PriceCalculator();
+        calculator.init();
     }
-}
-
-// Service Worker registration
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-                console.log('SW registered:', registration);
-            })
-            .catch(error => {
-                console.log('SW registration failed:', error);
-            });
-    });
-}
-
-// Error handling
-window.addEventListener('error', (e) => {
-    console.error('JavaScript Error:', e.error);
-    if (window.digitalCraft) {
-        window.digitalCraft.trackEvent('javascript_error', {
-            error_message: e.message,
-            error_filename: e.filename,
-            error_lineno: e.lineno
-        });
-    }
+    // ...weitere Initialisierungen...
 });
-
-// Add dynamic styles
-const additionalStyles = `
-.form-message {
-    padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    border-radius: var(--border-radius);
-    font-weight: 500;
-    border-left: 4px solid;
-}
-
-.form-message.success {
-    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
-    color: #047857;
-    border-color: var(--accent-color);
-}
-
-.form-message.error {
-    background: linear-gradient(135deg, #fef2f2, #fecaca);
-    color: #dc2626;
-    border-color: var(--error-color);
-}
-
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
-.spinner {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top-color: white;
-    animation: spin 1s ease-in-out infinite;
-    margin-right: 8px;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.nav-menu a.active {
-    color: var(--secondary-color);
-    font-weight: 600;
-}
-
-.selected-items .item {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid var(--border-color);
-    font-size: 0.9rem;
-}
-
-.selected-items .item:last-child {
-    border-bottom: none;
-}
-`;
-
-// Inject styles
-if (!document.querySelector('#dynamic-styles')) {
-    const styleSheet = document.createElement('style');
-    styleSheet.id = 'dynamic-styles';
-    styleSheet.textContent = additionalStyles;
-    document.head.appendChild(styleSheet);
-}

@@ -1472,6 +1472,8 @@ input:checked + .slider:before {
   margin-bottom: 3rem;
 }
 
+
+
 .footer-section h3,
 .footer-section h4 {
   color: var(--background-light);

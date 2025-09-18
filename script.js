@@ -322,8 +322,25 @@ class DigitalCraftWebsite {
     }
 
     async submitForm(form) {
-        // Standard-Submit, damit die Daten an die API-Route gesendet werden
-        form.submit();
+        const formData = new FormData(form);
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                this.showFormSuccess();
+                form.reset();
+                this.clearFormData();
+            } else {
+                this.showFormError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
+            }
+        } catch (error) {
+            this.showFormError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
+        }
     }
 
     async sendFormData(formData) {

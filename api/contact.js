@@ -21,15 +21,15 @@ export default async function handler(req, res) {
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: 'clgunduz@gmail.com',
-        pass: 'Mac-2018!' // Nutze ein App-Passwort, nicht dein normales Gmail-Passwort!
+        user: 'jks1marketing@gmail.com',
+        pass: 'Makoz-2023!' // Nutze ein App-Passwort, nicht dein normales Gmail-Passwort!
       }
     });
 
     // E-Mail-Inhalt
     const mailOptions = {
-      from: 'clgunduz@gmail.com',
-      to: 'clgunduz@gmail.com',
+      from: 'jks1marketing@gmail.com',
+      to: 'jks1marketing@gmail.com',
       subject: 'Neue SHK Anfrage von Website',
       text: `
 Name: ${name}

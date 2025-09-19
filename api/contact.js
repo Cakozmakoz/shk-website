@@ -104,24 +104,149 @@ export default async function handler(req, res) {
                 // Skip connection verification for speed (risky but faster)
                 // await transporter.verify();
                 
-                // Simplified email content for faster processing
-                const emailContent = `Neue SHK Website-Anfrage:
+                // Format calculator data for email
+                function formatCalculatorData(data) {
+                    if (!data) {
+                        return '\n\nKeine Kalkulator-Daten verfügbar';
+                    }
+                    
+                    try {
+                        const calc = JSON.parse(data);
+                        let formattedData = '\n\n=== KALKULATOR-AUSWAHL ===';
+                        
+                        // Base package
+                        if (calc.selectedBase) {
+                            const packageNames = {
+                                'basic-website': 'Essential Website (399€/Monat)',
+                                'professional-website': 'Professional Website (599€/Monat)',
+                                'premium-website': 'Premium Website (799€/Monat)'
+                            };
+                            formattedData += `\n\nGEWÄHLTES PAKET:\n• ${packageNames[calc.selectedBase] || calc.selectedBase}`;
+                        }
+                        
+                        // Add-ons
+                        formattedData += '\n\nZUSATZMODULE:';
+                        if (calc.selectedAddons && calc.selectedAddons.length > 0) {
+                            calc.selectedAddons.forEach(addon => {
+                                const addonNames = {
+                                    'ai-integration': 'KI-Integration (+299€/Monat)',
+                                    'booking-system': 'Online Terminbuchung (+199€/Monat)',
+                                    'crm-integration': 'CRM & Analytics (+249€/Monat)',
+                                    'whatsapp-integration': 'WhatsApp Business (+99€/Monat)',
+                                    'multilingual': 'Mehrsprachigkeit (+149€/Monat)',
+                                    'workflow-automation': 'Workflow Automatisierung (+399€/Monat)'
+                                };
+                                formattedData += `\n• ${addonNames[addon.addon] || addon.addon}`;
+                            });
+                        } else {
+                            formattedData += '\n• Keine Zusatzmodule ausgewählt';
+                        }
+                        
+                        // Details
+                        if (calc.selectedDetails) {
+                            formattedData += '\n\nUNTERNEHMENSDETAILS:';
+                            if (calc.selectedDetails['company-size']) {
+                                const sizeNames = {
+                                    'small': '1-5 Mitarbeiter',
+                                    'medium': '6-20 Mitarbeiter (+10%)',
+                                    'large': '21+ Mitarbeiter (+20%)'
+                                };
+                                formattedData += `\n• Unternehmensgröße: ${sizeNames[calc.selectedDetails['company-size']] || calc.selectedDetails['company-size']}`;
+                            }
+                            if (calc.selectedDetails['locations']) {
+                                const locationNames = {
+                                    '1': '1 Standort',
+                                    '2-3': '2-3 Standorte (+15%)',
+                                    '4+': '4+ Standorte (+30%)'
+                                };
+                                formattedData += `\n• Anzahl Standorte: ${locationNames[calc.selectedDetails['locations']] || calc.selectedDetails['locations']}`;
+                            }
+                            if (calc.selectedDetails['support']) {
+                                const supportNames = {
+                                    'email': 'E-Mail Support (inkl.)',
+                                    'phone': 'Telefon Support (+99€)',
+                                    'priority': 'Priority Support (+199€)'
+                                };
+                                formattedData += `\n• Support-Level: ${supportNames[calc.selectedDetails['support']] || calc.selectedDetails['support']}`;
+                            }
+                        }
+                        
+                        // Contract
+                        if (calc.selectedContract) {
+                            formattedData += '\n\nVERTRAGSINFORMATIONEN:';
+                            const contractNames = {
+                                'monthly': 'Monatlich (kein Rabatt)',
+                                'annual': 'Jährlich (10% Rabatt)',
+                                'biannual': '2 Jahre (15% Rabatt)'
+                            };
+                            formattedData += `\n• Laufzeit: ${contractNames[calc.selectedContract.duration] || calc.selectedContract.duration}`;
+                        }
+                        
+                        // Pricing
+                        if (calc.prices) {
+                            formattedData += '\n\n=== PREISÜBERSICHT ===';
+                            formattedData += `\n• Basis-Paket: ${calc.prices.base}€/Monat`;
+                            formattedData += `\n• Zusatzmodule: ${calc.prices.addons}€/Monat`;
+                            formattedData += `\n• Support: ${calc.prices.support}€/Monat`;
+                            formattedData += `\n• Zwischensumme: ${calc.prices.subtotal}€/Monat`;
+                            
+                            if (calc.prices.discount > 0) {
+                                formattedData += `\n• Rabatt: -${calc.prices.discount}€/Monat`;
+                            }
+                            
+                            formattedData += `\n• MONATLICHER GESAMTPREIS: ${calc.prices.total}€`;
+                            formattedData += `\n• Einmalige Setup-Gebühr: ${calc.prices.setup}€`;
+                        }
+                        
+                        if (calc.timestamp) {
+                            formattedData += `\n\nKonfigurations-Zeitstempel: ${new Date(calc.timestamp).toLocaleString('de-DE', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            })} Uhr`;
+                        }
+                        
+                        return formattedData;
+                    } catch (e) {
+                        console.error('Error parsing calculator data:', e);
+                        return '\n\nKalkulator-Daten konnten nicht verarbeitet werden: ' + (calculatorData ? 'Daten vorhanden aber fehlerhaft' : 'Keine Daten übermittelt');
+                    }
+                }
                 
+                // Enhanced email content with calculator data
+                const emailContent = `Neue SHK Website-Anfrage eingegangen!
+                
+=== KONTAKTDATEN ===
 Name: ${name}
 Unternehmen: ${company}
 E-Mail: ${email}
 Telefon: ${phone || 'Nicht angegeben'}
 Branche: ${industry}
+Gewünschte Website: ${websiteType || 'Nicht spezifiziert'}
 
-Nachricht: ${message || 'Keine Nachricht'}
+=== NACHRICHT ===
+${message || 'Keine Nachricht hinterlassen'}${formatCalculatorData(calculatorData)}
 
-Zeitstempel: ${new Date().toLocaleString('de-DE')}`;
+=== ANFRAGE-INFO ===
+Zeitstempel: ${new Date().toLocaleString('de-DE', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })} Uhr
+IP-Adresse: ${req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'Unbekannt'}
 
-                // Send email with shorter timeout
+---
+Automatisch generiert von der SHK Website`;
+
+                // Send email with enhanced subject
                 const mailOptions = {
                     from: process.env.GMAIL_USER || 'clgunduz@gmail.com',
                     to: process.env.GMAIL_USER || 'clgunduz@gmail.com',
-                    subject: `SHK Anfrage: ${company}`,
+                    subject: `🔧 SHK Anfrage: ${company} - ${calculatorData ? 'Mit Kalkulator' : 'Ohne Kalkulator'}`,
                     text: emailContent
                 };
 

@@ -409,6 +409,7 @@ class DigitalCraftWebsite {
             console.log('Response result:', result);
 
             if (response.ok && result.success) {
+                console.log('Form submission successful, showing popup...');
                 // Beautiful styled success popup
                 this.showStyledSuccessPopup(result.message || 'Ihre Nachricht wurde erfolgreich gesendet. Wir melden uns innerhalb von 48 Stunden bei Ihnen.');
                 
@@ -424,6 +425,7 @@ class DigitalCraftWebsite {
                     has_calculator_data: !!calculatorDataField?.value
                 });
             } else {
+                console.log('Form submission failed:', result);
                 // Server returned error
                 const errorMessage = result.error || 'Ein unbekannter Fehler ist aufgetreten.';
                 this.showFormError(errorMessage);
@@ -505,331 +507,181 @@ class DigitalCraftWebsite {
         setTimeout(() => message.remove(), 10000);
     }
 
+    showFormError(errorMessage) {
+        console.log('Showing form error:', errorMessage);
+        
+        // Remove any existing error messages
+        const existingErrors = document.querySelectorAll('.form-message.error');
+        existingErrors.forEach(error => error.remove());
+        
+        // Create error message element
+        const message = document.createElement('div');
+        message.className = 'form-message error';
+        message.innerHTML = `
+            <strong>⚠ Fehler:</strong><br>
+            ${errorMessage}
+        `;
+        message.setAttribute('role', 'alert');
+        
+        // Insert at top of form
+        const form = document.querySelector('.contact-form');
+        if (form) {
+            form.insertBefore(message, form.firstChild);
+            
+            // Scroll to error message
+            message.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Auto-remove after 15 seconds
+            setTimeout(() => message.remove(), 15000);
+        } else {
+            // Fallback: show as alert if form not found
+            console.error('Contact form not found, showing alert instead');
+            alert('Fehler: ' + errorMessage.replace(/<[^>]*>/g, ''));
+        }
+    }
+
     showStyledSuccessPopup(message) {
+        console.log('showStyledSuccessPopup called with message:', message);
+        
         // Remove any existing popups first
         const existingPopups = document.querySelectorAll('.success-popup');
         const existingStyles = document.querySelectorAll('style[data-popup-style]');
-        existingPopups.forEach(popup => popup.remove());
-        existingStyles.forEach(style => style.remove());
+        existingPopups.forEach(popup => {
+            console.log('Removing existing popup');
+            popup.remove();
+        });
+        existingStyles.forEach(style => {
+            console.log('Removing existing popup style');
+            style.remove();
+        });
         
-        // Create beautiful success popup
-        const popup = document.createElement('div');
-        popup.className = 'success-popup';
-        popup.innerHTML = `
-            <div class="popup-overlay"></div>
-            <div class="popup-content">
-                <div class="success-animation">
-                    <div class="checkmark-circle">
-                        <div class="checkmark"></div>
-                    </div>
-                </div>
-                <h3>Vielen Dank!</h3>
-                <p>${message}</p>
-                <div class="popup-actions">
-                    <button class="popup-btn primary" type="button">Verstanden</button>
-                    <button class="popup-btn secondary" type="button">Direkt anrufen</button>
-                </div>
-            </div>
-        `;
+        console.log('Creating new popup...');
         
-        // Create and add styles for the popup
-        const style = document.createElement('style');
-        style.setAttribute('data-popup-style', 'success');
-        style.textContent = `
-            @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-            }
-            
-            @keyframes popupSlideIn {
-                from {
-                    transform: scale(0.9) translateY(20px);
-                    opacity: 0;
-                }
-                to {
-                    transform: scale(1) translateY(0);
-                    opacity: 1;
-                }
-            }
-            
-            @keyframes scaleIn {
-                from {
-                    transform: scale(0);
-                    opacity: 0;
-                }
-                to {
-                    transform: scale(1);
-                    opacity: 1;
-                }
-            }
-            
-            @keyframes checkmarkDraw {
-                from {
-                    opacity: 0;
-                    transform: translate(-50%, -60%) rotate(45deg) scale(0);
-                }
-                to {
-                    opacity: 1;
-                    transform: translate(-50%, -60%) rotate(45deg) scale(1);
-                }
-            }
-            
-            .success-popup {
+        // Test if we can even create a simple popup first
+        try {
+            // Create beautiful success popup
+            const popup = document.createElement('div');
+            popup.className = 'success-popup';
+            popup.style.cssText = `
                 position: fixed !important;
                 top: 0 !important;
                 left: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                z-index: 999999 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                background: rgba(0, 0, 0, 0.8) !important;
+                z-index: 2147483647 !important;
                 display: flex !important;
                 align-items: center !important;
                 justify-content: center !important;
-                animation: fadeIn 0.3s ease !important;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
-            }
+                font-family: system-ui, -apple-system, sans-serif !important;
+            `;
             
-            .success-popup .popup-overlay {
-                position: absolute !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-                height: 100% !important;
-                background: rgba(0, 0, 0, 0.5) !important;
-                backdrop-filter: blur(8px) !important;
-                -webkit-backdrop-filter: blur(8px) !important;
-            }
+            popup.innerHTML = `
+                <div style="
+                    background: white !important;
+                    padding: 2rem !important;
+                    border-radius: 12px !important;
+                    text-align: center !important;
+                    max-width: 400px !important;
+                    width: 90% !important;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.3) !important;
+                ">
+                    <div style="
+                        width: 60px !important;
+                        height: 60px !important;
+                        background: #10b981 !important;
+                        border-radius: 50% !important;
+                        margin: 0 auto 1rem !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        font-size: 2rem !important;
+                        color: white !important;
+                    ">✓</div>
+                    <h3 style="margin: 0 0 1rem 0 !important; color: #1a1a1a !important;">Vielen Dank!</h3>
+                    <p style="margin: 0 0 2rem 0 !important; color: #666 !important; line-height: 1.5 !important;">${message}</p>
+                    <div style="display: flex !important; gap: 1rem !important; justify-content: center !important;">
+                        <button class="popup-btn-ok" style="
+                            background: #1e40af !important;
+                            color: white !important;
+                            border: none !important;
+                            padding: 12px 24px !important;
+                            border-radius: 6px !important;
+                            cursor: pointer !important;
+                            font-weight: 600 !important;
+                        ">Verstanden</button>
+                        <button class="popup-btn-call" style="
+                            background: #ea580c !important;
+                            color: white !important;
+                            border: none !important;
+                            padding: 12px 24px !important;
+                            border-radius: 6px !important;
+                            cursor: pointer !important;
+                            font-weight: 600 !important;
+                        ">Anrufen</button>
+                    </div>
+                </div>
+            `;
             
-            .success-popup .popup-content {
-                position: relative !important;
-                background: #ffffff !important;
-                border-radius: 24px !important;
-                padding: 3rem 2.5rem 2.5rem !important;
-                max-width: 500px !important;
-                width: 90% !important;
-                max-height: 90vh !important;
-                text-align: center !important;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
-                animation: popupSlideIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
-                overflow-y: auto !important;
-            }
+            console.log('Created popup element:', popup);
             
-            .success-popup .success-animation {
-                margin: 0 auto 2rem !important;
-                width: 90px !important;
-                height: 90px !important;
-            }
+            // Add popup to body
+            console.log('Appending popup to body...');
+            document.body.appendChild(popup);
+            console.log('Popup appended to body. Current popup in DOM:', document.querySelector('.success-popup'));
             
-            .success-popup .checkmark-circle {
-                width: 90px !important;
-                height: 90px !important;
-                border-radius: 50% !important;
-                background: linear-gradient(135deg, #10b981, #059669) !important;
-                position: relative !important;
-                animation: scaleIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both !important;
-                box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3) !important;
-            }
-            
-            .success-popup .checkmark {
-                position: absolute !important;
-                top: 50% !important;
-                left: 50% !important;
-                width: 28px !important;
-                height: 48px !important;
-                border: solid #ffffff !important;
-                border-width: 0 4px 4px 0 !important;
-                transform: translate(-50%, -60%) rotate(45deg) !important;
-                animation: checkmarkDraw 0.5s ease-in-out 0.8s both !important;
-                opacity: 0 !important;
-            }
-            
-            .success-popup .popup-content h3 {
-                color: #1f2937 !important;
-                font-size: 1.875rem !important;
-                font-weight: 700 !important;
-                margin: 0 0 1rem 0 !important;
-                line-height: 1.3 !important;
-            }
-            
-            .success-popup .popup-content p {
-                color: #6b7280 !important;
-                font-size: 1.125rem !important;
-                line-height: 1.6 !important;
-                margin: 0 0 2.5rem 0 !important;
-                max-width: 400px !important;
-                margin-left: auto !important;
-                margin-right: auto !important;
-                margin-bottom: 2.5rem !important;
-            }
-            
-            .success-popup .popup-actions {
-                display: flex !important;
-                gap: 1rem !important;
-                justify-content: center !important;
-                flex-wrap: wrap !important;
-            }
-            
-            .success-popup .popup-btn {
-                padding: 14px 28px !important;
-                border: none !important;
-                border-radius: 14px !important;
-                font-weight: 600 !important;
-                font-size: 1rem !important;
-                cursor: pointer !important;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-                min-width: 150px !important;
-                position: relative !important;
-                overflow: hidden !important;
-            }
-            
-            .success-popup .popup-btn:focus {
-                outline: 2px solid #3b82f6 !important;
-                outline-offset: 2px !important;
-            }
-            
-            .success-popup .popup-btn.primary {
-                background: linear-gradient(135deg, #1e40af, #1e3a8a) !important;
-                color: #ffffff !important;
-                box-shadow: 0 4px 14px 0 rgba(30, 64, 175, 0.4) !important;
-            }
-            
-            .success-popup .popup-btn.primary:hover {
-                background: linear-gradient(135deg, #1e3a8a, #1d4ed8) !important;
-                transform: translateY(-2px) !important;
-                box-shadow: 0 8px 25px 0 rgba(30, 64, 175, 0.5) !important;
-            }
-            
-            .success-popup .popup-btn.primary:active {
-                transform: translateY(0) !important;
-            }
-            
-            .success-popup .popup-btn.secondary {
-                background: #ffffff !important;
-                color: #ea580c !important;
-                border: 2px solid #ea580c !important;
-                box-shadow: 0 2px 8px rgba(234, 88, 12, 0.1) !important;
-            }
-            
-            .success-popup .popup-btn.secondary:hover {
-                background: #ea580c !important;
-                color: #ffffff !important;
-                transform: translateY(-2px) !important;
-                box-shadow: 0 8px 25px rgba(234, 88, 12, 0.3) !important;
-            }
-            
-            .success-popup .popup-btn.secondary:active {
-                transform: translateY(0) !important;
-            }
-            
-            @media (max-width: 640px) {
-                .success-popup .popup-content {
-                    padding: 2.5rem 1.5rem 2rem !important;
-                    margin: 1rem !important;
-                    border-radius: 20px !important;
-                }
-                
-                .success-popup .popup-actions {
-                    flex-direction: column !important;
-                    gap: 0.75rem !important;
-                }
-                
-                .success-popup .popup-btn {
-                    width: 100% !important;
-                    min-width: unset !important;
-                }
-                
-                .success-popup .success-animation {
-                    width: 70px !important;
-                    height: 70px !important;
-                }
-                
-                .success-popup .checkmark-circle {
-                    width: 70px !important;
-                    height: 70px !important;
-                }
-                
-                .success-popup .checkmark {
-                    width: 22px !important;
-                    height: 38px !important;
-                }
-                
-                .success-popup .popup-content h3 {
-                    font-size: 1.5rem !important;
-                }
-                
-                .success-popup .popup-content p {
-                    font-size: 1rem !important;
-                }
-            }
-        `;
-        
-        // Add styles to head
-        document.head.appendChild(style);
-        
-        // Add popup to body
-        document.body.appendChild(popup);
-        
-        // Event handlers
-        const removePopup = () => {
-            if (popup.parentNode) {
-                popup.style.animation = 'fadeIn 0.3s ease reverse';
-                setTimeout(() => {
+            // Simple event handlers
+            const removePopup = () => {
+                console.log('Removing popup...');
+                if (popup.parentNode) {
                     popup.remove();
-                    style.remove();
-                }, 300);
+                    console.log('Popup removed from DOM');
+                }
+            };
+            
+            // Button event listeners
+            const okBtn = popup.querySelector('.popup-btn-ok');
+            const callBtn = popup.querySelector('.popup-btn-call');
+            
+            if (okBtn) {
+                okBtn.addEventListener('click', removePopup);
             }
-        };
-        
-        // Button event listeners
-        const primaryBtn = popup.querySelector('.popup-btn.primary');
-        const secondaryBtn = popup.querySelector('.popup-btn.secondary');
-        const overlay = popup.querySelector('.popup-overlay');
-        
-        primaryBtn.addEventListener('click', removePopup);
-        secondaryBtn.addEventListener('click', () => {
-            removePopup();
-            // Small delay to ensure popup is removed before redirect
-            setTimeout(() => {
-                window.location.href = 'tel:+491234567890';
-            }, 100);
-        });
-        overlay.addEventListener('click', removePopup);
-        
-        // Auto-remove after 20 seconds
-        const autoRemoveTimeout = setTimeout(removePopup, 20000);
-        
-        // Keyboard event listener
-        const handleKeydown = (e) => {
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                removePopup();
-                document.removeEventListener('keydown', handleKeydown);
-                clearTimeout(autoRemoveTimeout);
+            
+            if (callBtn) {
+                callBtn.addEventListener('click', () => {
+                    removePopup();
+                    setTimeout(() => {
+                        window.location.href = 'tel:+491234567890';
+                    }, 100);
+                });
             }
-        };
-        
-        document.addEventListener('keydown', handleKeydown);
-        
-        // Focus management
-        setTimeout(() => {
-            primaryBtn.focus();
-        }, 500);
-        
-        // Clean up timeout when popup is removed
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList' && mutation.removedNodes.length > 0) {
-                    for (let node of mutation.removedNodes) {
-                        if (node === popup) {
-                            clearTimeout(autoRemoveTimeout);
-                            document.removeEventListener('keydown', handleKeydown);
-                            observer.disconnect();
-                        }
-                    }
+            
+            // Click background to close
+            popup.addEventListener('click', (e) => {
+                if (e.target === popup) {
+                    removePopup();
                 }
             });
-        });
-        
-        observer.observe(document.body, { childList: true });
+            
+            // Auto-remove after 20 seconds
+            setTimeout(removePopup, 20000);
+            
+            // Escape key to close
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') {
+                    removePopup();
+                    document.removeEventListener('keydown', handleEscape);
+                }
+            };
+            document.addEventListener('keydown', handleEscape);
+            
+            console.log('Popup setup complete');
+            
+        } catch (error) {
+            console.error('Error creating popup:', error);
+            // Fallback to alert
+            alert('Vielen Dank! Ihre Nachricht wurde erfolgreich gesendet.');
+        }
     }
 
     // Form Data Persistence

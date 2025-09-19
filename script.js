@@ -410,8 +410,34 @@ class DigitalCraftWebsite {
 
             if (response.ok && result.success) {
                 console.log('Form submission successful, showing popup...');
-                // Beautiful styled success popup
-                this.showStyledSuccessPopup(result.message || 'Ihre Nachricht wurde erfolgreich gesendet. Wir melden uns innerhalb von 48 Stunden bei Ihnen.');
+                
+                // Try multiple ways to show the success popup
+                const message = result.message || 'Ihre Nachricht wurde erfolgreich gesendet. Wir melden uns innerhalb von 48 Stunden bei Ihnen.';
+                
+                try {
+                    // Method 1: Use class method
+                    if (this.showStyledSuccessPopup) {
+                        console.log('Using class method to show popup');
+                        this.showStyledSuccessPopup(message);
+                    } else {
+                        throw new Error('Class method not available');
+                    }
+                } catch (classError) {
+                    console.log('Class method failed, trying global function:', classError);
+                    try {
+                        // Method 2: Use global function
+                        if (window.showStyledSuccessPopup) {
+                            console.log('Using global function to show popup');
+                            window.showStyledSuccessPopup(message);
+                        } else {
+                            throw new Error('Global function not available');
+                        }
+                    } catch (globalError) {
+                        console.log('Global function failed, using fallback:', globalError);
+                        // Method 3: Direct fallback
+                        showFallbackPopup(message);
+                    }
+                }
                 
                 // Reset form
                 form.reset();
@@ -428,7 +454,19 @@ class DigitalCraftWebsite {
                 console.log('Form submission failed:', result);
                 // Server returned error
                 const errorMessage = result.error || 'Ein unbekannter Fehler ist aufgetreten.';
-                this.showFormError(errorMessage);
+                
+                try {
+                    if (this.showFormError) {
+                        this.showFormError(errorMessage);
+                    } else if (window.showFormError) {
+                        window.showFormError(errorMessage);
+                    } else {
+                        throw new Error('No error display method available');
+                    }
+                } catch (errorDisplayError) {
+                    console.error('Error display failed:', errorDisplayError);
+                    alert('Fehler: ' + errorMessage.replace(/<[^>]*>/g, ''));
+                }
                 
                 // Track error
                 this.trackEvent('form_submission_error', {
@@ -1747,11 +1785,135 @@ function scrollToSection(sectionId) {
     }
 }
 
-// Initialize the website when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.digitalCraftWebsite = new DigitalCraftWebsite();
-    window.digitalCraftWebsite.setupCalculator();
-});
+// Initialize the website when DOM is loaded or immediately if already loaded
+function initializeWebsite() {
+    if (!window.digitalCraftWebsite) {
+        console.log('Initializing DigitalCraftWebsite...');
+        window.digitalCraftWebsite = new DigitalCraftWebsite();
+        
+        // Ensure popup functions are globally accessible
+        window.showStyledSuccessPopup = function(message) {
+            if (window.digitalCraftWebsite && window.digitalCraftWebsite.showStyledSuccessPopup) {
+                window.digitalCraftWebsite.showStyledSuccessPopup(message);
+            } else {
+                // Fallback popup if class method fails
+                console.log('Using fallback popup');
+                showFallbackPopup(message);
+            }
+        };
+        
+        window.showFormError = function(errorMessage) {
+            if (window.digitalCraftWebsite && window.digitalCraftWebsite.showFormError) {
+                window.digitalCraftWebsite.showFormError(errorMessage);
+            } else {
+                console.error('Form error:', errorMessage.replace(/<[^>]*>/g, ''));
+                alert('Fehler: ' + errorMessage.replace(/<[^>]*>/g, ''));
+            }
+        };
+        
+        console.log('DigitalCraftWebsite initialized successfully');
+    } else {
+        console.log('DigitalCraftWebsite already initialized');
+    }
+}
+
+// Fallback popup function in case the class method fails
+function showFallbackPopup(message) {
+    console.log('Showing fallback popup...');
+    
+    // Remove any existing popups
+    const existingPopups = document.querySelectorAll('.fallback-success-popup');
+    existingPopups.forEach(popup => popup.remove());
+    
+    // Create simple popup
+    const popup = document.createElement('div');
+    popup.className = 'fallback-success-popup';
+    popup.style.cssText = `
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        z-index: 2147483647 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-family: system-ui, -apple-system, sans-serif !important;
+    `;
+    
+    popup.innerHTML = `
+        <div style="
+            background: white !important;
+            padding: 2rem !important;
+            border-radius: 12px !important;
+            text-align: center !important;
+            max-width: 400px !important;
+            width: 90% !important;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3) !important;
+        ">
+            <div style="
+                width: 60px !important;
+                height: 60px !important;
+                background: #10b981 !important;
+                border-radius: 50% !important;
+                margin: 0 auto 1rem !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-size: 2rem !important;
+                color: white !important;
+            ">✓</div>
+            <h3 style="margin: 0 0 1rem 0 !important; color: #1a1a1a !important;">Vielen Dank!</h3>
+            <p style="margin: 0 0 2rem 0 !important; color: #666 !important; line-height: 1.5 !important;">${message}</p>
+            <div style="display: flex !important; gap: 1rem !important; justify-content: center !important; flex-wrap: wrap !important;">
+                <button onclick="this.closest('.fallback-success-popup').remove()" style="
+                    background: #1e40af !important;
+                    color: white !important;
+                    border: none !important;
+                    padding: 12px 24px !important;
+                    border-radius: 6px !important;
+                    cursor: pointer !important;
+                    font-weight: 600 !important;
+                ">Verstanden</button>
+                <button onclick="this.closest('.fallback-success-popup').remove(); window.location.href='tel:+491234567890'" style="
+                    background: #ea580c !important;
+                    color: white !important;
+                    border: none !important;
+                    padding: 12px 24px !important;
+                    border-radius: 6px !important;
+                    cursor: pointer !important;
+                    font-weight: 600 !important;
+                ">Anrufen</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(popup);
+    console.log('Fallback popup added to DOM');
+    
+    // Auto-remove after 20 seconds
+    setTimeout(() => {
+        if (popup.parentNode) {
+            popup.remove();
+        }
+    }, 20000);
+    
+    // Click background to close
+    popup.addEventListener('click', (e) => {
+        if (e.target === popup) {
+            popup.remove();
+        }
+    });
+}
+
+// Initialize immediately if DOM is already loaded, otherwise wait
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeWebsite);
+} else {
+    // DOM is already loaded
+    initializeWebsite();
+}
 
 // Export for module systems
 if (typeof module !== 'undefined' && module.exports) {

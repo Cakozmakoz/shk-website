@@ -215,9 +215,10 @@ export default async function handler(req, res) {
                     }
                 }
                 
-                // Enhanced email content with calculator data
-                const emailContent = `Neue SHK Website-Anfrage eingegangen!
-                
+                // Enhanced email content with customer prominently displayed
+                const emailContent = `NEUE SHK WEBSITE-ANFRAGE VON: ${name} (${email})
+UNTERNEHMEN: ${company}
+
 === KONTAKTDATEN ===
 Name: ${name}
 Unternehmen: ${company}
@@ -240,15 +241,21 @@ Zeitstempel: ${new Date().toLocaleString('de-DE', {
 IP-Adresse: ${req.headers['x-forwarded-for'] || req.connection?.remoteAddress || 'Unbekannt'}
 
 ---
+KUNDEN-E-MAIL FÜR ANTWORT: ${email}
 Automatisch generiert von der SHK Website`;
 
-                // Send email with enhanced subject
+                // Send email with customer's email properly displayed
                 const mailOptions = {
-                    from: `"${name}" <${email}>`, // Customer's name and email as sender
+                    from: `"SHK Website - ${name}" <${process.env.GMAIL_USER || 'clgunduz@gmail.com'}>`, // Use your Gmail but show customer name
                     to: process.env.GMAIL_USER || 'clgunduz@gmail.com',
-                    replyTo: email, // Ensure replies go to customer
+                    replyTo: `"${name}" <${email}>`, // Customer's full details for reply
                     subject: `🔧 SHK Anfrage: ${company} - ${calculatorData ? 'Mit Kalkulator' : 'Ohne Kalkulator'}`,
-                    text: emailContent
+                    text: emailContent,
+                    headers: {
+                        'X-Original-From': `"${name}" <${email}>`, // Custom header showing original sender
+                        'X-Customer-Email': email, // Additional header for customer email
+                        'X-Customer-Company': company // Additional header for customer company
+                    }
                 };
 
                 // Set a timeout for email sending

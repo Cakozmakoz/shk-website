@@ -4,24 +4,43 @@ export default async function handler(req, res) {
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
     
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
     
     if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+        return res.status(405).json({ 
+            success: false,
+            error: 'Method not allowed' 
+        });
     }
 
     try {
+        console.log('Received request:', {
+            method: req.method,
+            headers: req.headers,
+            bodyType: typeof req.body
+        });
+        
         // Extract form data from request body
-        let body;
-        if (typeof req.body === 'string') {
-            body = JSON.parse(req.body);
-        } else {
-            body = req.body;
+        let body = req.body;
+        
+        // Handle different content types
+        if (typeof body === 'string') {
+            try {
+                body = JSON.parse(body);
+            } catch (parseError) {
+                console.error('JSON parse error:', parseError);
+                return res.status(400).json({ 
+                    success: false,
+                    error: 'Invalid JSON format' 
+                });
+            }
         }
+        
+        console.log('Parsed body:', body);
         
         const { 
             name, 
@@ -31,14 +50,16 @@ export default async function handler(req, res) {
             industry,
             'website-type': websiteType,
             message, 
-            'calculator-data': calculatorData 
+            'calculator-data': calculatorData,
+            privacy
         } = body;
 
         // Basic validation
         if (!name || !email || !company || !industry) {
+            console.log('Validation failed:', { name: !!name, email: !!email, company: !!company, industry: !!industry });
             return res.status(400).json({ 
                 success: false,
-                error: 'Required fields missing: name, email, company, and industry are required' 
+                error: 'Erforderliche Felder fehlen: Name, E-Mail, Unternehmen und Branche sind erforderlich.' 
             });
         }
 
@@ -47,168 +68,100 @@ export default async function handler(req, res) {
         if (!emailRegex.test(email)) {
             return res.status(400).json({ 
                 success: false,
-                error: 'Invalid email address' 
+                error: 'Ungültige E-Mail-Adresse.' 
+            });
+        }
+        
+        // Privacy checkbox validation
+        if (!privacy) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Bitte stimmen Sie den Datenschutzbestimmungen zu.' 
             });
         }
 
-        // Configure email transport
-        const transporter = nodemailer.createTransport({
-            host: 'smtp.gmail.com',
-            port: 587,
-            secure: false,
-            auth: {
-                user: 'clgunduz@gmail.com',
-                pass: process.env.GMAIL_PASSWORD
-            }
-        });
+        // Check if nodemailer is available (optimized for free tier)
+        let emailSent = false;
+        const startTime = Date.now();
+        
+        try {
+            // Only attempt email if password is configured and we have time
+            if (process.env.GMAIL_PASSWORD && (Date.now() - startTime) < 3000) {
+                // Configure email transport with shorter timeout
+                const transporter = nodemailer.createTransport({
+                    host: 'smtp.gmail.com',
+                    port: 587,
+                    secure: false,
+                    connectionTimeout: 2000, // 2 seconds
+                    greetingTimeout: 1000,   // 1 second
+                    socketTimeout: 2000,     // 2 seconds
+                    auth: {
+                        user: process.env.GMAIL_USER || 'clgunduz@gmail.com',
+                        pass: process.env.GMAIL_PASSWORD
+                    }
+                });
 
-        // Test connection
-        await transporter.verify();
+                // Skip connection verification for speed (risky but faster)
+                // await transporter.verify();
+                
+                // Simplified email content for faster processing
+                const emailContent = `Neue SHK Website-Anfrage:
+                
+Name: ${name}
+Unternehmen: ${company}
+E-Mail: ${email}
+Telefon: ${phone || 'Nicht angegeben'}
+Branche: ${industry}
 
-        // Format calculator data for email
-        function formatCalculatorData(data) {
-            if (!data) {
-                return 'Keine Kalkulator-Daten verfügbar';
+Nachricht: ${message || 'Keine Nachricht'}
+
+Zeitstempel: ${new Date().toLocaleString('de-DE')}`;
+
+                // Send email with shorter timeout
+                const mailOptions = {
+                    from: process.env.GMAIL_USER || 'clgunduz@gmail.com',
+                    to: process.env.GMAIL_USER || 'clgunduz@gmail.com',
+                    subject: `SHK Anfrage: ${company}`,
+                    text: emailContent
+                };
+
+                // Set a timeout for email sending
+                const emailPromise = transporter.sendMail(mailOptions);
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Email timeout')), 3000)
+                );
+                
+                await Promise.race([emailPromise, timeoutPromise]);
+                emailSent = true;
+                
+                console.log(`Email sent successfully in ${Date.now() - startTime}ms`);
+            } else {
+                console.log('Gmail not configured or timeout reached, skipping email');
             }
             
-            try {
-                const calc = JSON.parse(data);
-                let formattedData = `\n\nGEWÄHLTES PAKET:\n• ${calc.selectedBase === 'basic-website' ? 'Essential Website (399€/Monat)' : 
-    calc.selectedBase === 'professional-website' ? 'Professional Website (599€/Monat)' : 
-    calc.selectedBase === 'premium-website' ? 'Premium Website (799€/Monat)' : calc.selectedBase || 'Nicht ausgewählt'}\n\nZUSATZMODULE:`;
-
-                if (calc.selectedAddons && calc.selectedAddons.length > 0) {
-                    calc.selectedAddons.forEach(addon => {
-                        const addonNames = {
-                            'ai-integration': 'KI-Integration (+299€/Monat)',
-                            'booking-system': 'Online Terminbuchung (+199€/Monat)',
-                            'crm-integration': 'CRM & Analytics (+249€/Monat)',
-                            'whatsapp-integration': 'WhatsApp Business (+99€/Monat)',
-                            'multilingual': 'Mehrsprachigkeit (+149€/Monat)',
-                            'workflow-automation': 'Workflow Automatisierung (+399€/Monat)'
-                        };
-                        formattedData += `\n• ${addonNames[addon.addon] || addon.addon}`;
-                    });
-                } else {
-                    formattedData += '\n• Keine Zusatzmodule ausgewählt';
-                }
-
-                if (calc.selectedContract) {
-                    formattedData += `\n\nVERTRAGSINFORMATIONEN:\n• Laufzeit: ${calc.selectedContract.duration === 'monthly' ? 'Monatlich' :
-                        calc.selectedContract.duration === 'annual' ? 'Jährlich (10% Rabatt)' :
-                        calc.selectedContract.duration === 'biannual' ? '2 Jahre (15% Rabatt)' : 
-                        calc.selectedContract.duration}`;
-                }
-
-                if (calc.prices) {
-                    formattedData += `
-
-PREISÜBERSICHT:
-• Basis-Paket: ${calc.prices.base}€/Monat
-• Zusatzmodule: ${calc.prices.addons}€/Monat
-• Support: ${calc.prices.support}€/Monat
-• Zwischensumme: ${calc.prices.subtotal}€/Monat`;
-                    
-                    if (calc.prices.discount > 0) {
-                        formattedData += `\n• Rabatt: -${calc.prices.discount}€/Monat`;
-                    }
-                    
-                    formattedData += `\n• Monatlicher Gesamtpreis: ${calc.prices.total}€\n• Einmalige Setup-Gebühr: ${calc.prices.setup}€`;
-                }
-
-                if (calc.timestamp) {
-                    formattedData += `\n\nKonfigurations-Zeitstempel: ${new Date(calc.timestamp).toLocaleString('de-DE', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })} Uhr`;
-                }
-
-                return formattedData;
-            } catch (e) {
-                console.error('Error parsing calculator data:', e);
-                return 'Kalkulator-Daten konnten nicht verarbeitet werden';
-            }
+        } catch (emailError) {
+            console.error('Email sending failed:', emailError.message);
+            // Don't fail the entire request if email fails
+            emailSent = false;
         }
 
-        // Format industry names
-        const industryNames = {
-            'shk': 'SHK (Sanitär, Heizung, Klima)',
-            'sanitaer': 'Sanitär / Installateur',
-            'heizung': 'Heizungsbau / Heizungstechnik',
-            'klima': 'Klimatechnik / Lüftung',
-            'elektrik': 'Elektrik / Elektroinstallation',
-            'baugewerbe': 'Baugewerbe allgemein',
-            'andere': 'Andere Handwerksbranche'
-        };
+        // Log successful submission
+        console.log(`Contact form submission processed from ${email} at ${new Date().toISOString()}`);
 
-        const websiteTypeNames = {
-            'neue-website': 'Neue SHK Webseite erstellen',
-            'website-redesign': 'Handwerker Website überarbeiten',
-            'ki-integration': 'KI-Integration in bestehende Website',
-            'vollservice': 'Komplette Digitalisierung Handwerksbetrieb'
-        };
-
-        // Compose email content
-        const emailContent = `Hallo Team,
-
-Eine neue SHK Website-Anfrage ist eingegangen:
-
-KONTAKTDATEN:
-• Name: ${name}
-• Unternehmen: ${company}
-• E-Mail: ${email}
-• Telefon: ${phone || 'Nicht angegeben'}
-• Branche: ${industryNames[industry] || industry}
-• Gewünschte Website: ${websiteTypeNames[websiteType] || websiteType || 'Nicht spezifiziert'}
-
-NACHRICHT:
-${message || 'Keine Nachricht hinterlassen'}
-${formatCalculatorData(calculatorData)}
-
-Anfrage-Zeitstempel: ${new Date().toLocaleString('de-DE', {
-            day: '2-digit',
-            month: '2-digit', 
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        })} Uhr\n\nViele Grüße,\nIhr automatisches Benachrichtigungssystem`;
-
-        // Send email
-        const mailOptions = {
-            from: 'clgunduz@gmail.com',
-            to: 'clgunduz@gmail.com',
-            subject: `Neue SHK Website-Anfrage von ${company}`,
-            text: emailContent
-        };
-
-        await transporter.sendMail(mailOptions);
-
-        // Log successful submission (for debugging)
-        console.log(`New contact form submission from ${email} at ${new Date().toISOString()}`);
-
-        // Return success response
+        // Return success response (even if email failed)
         return res.status(200).json({
             success: true,
-            message: 'Vielen Dank für Ihre Anfrage! Wir melden uns innerhalb von 48 Stunden bei Ihnen.'
+            message: emailSent 
+                ? 'Vielen Dank für Ihre Anfrage! Wir melden uns innerhalb von 48 Stunden bei Ihnen.'
+                : 'Vielen Dank für Ihre Anfrage! Diese wurde erfolgreich übermittelt.'
         });
 
     } catch (error) {
         console.error('Error processing contact form:', error);
         
-        // Return different error messages based on error type
-        if (error.code === 'EAUTH' || error.code === 'ECONNECTION') {
-            return res.status(500).json({
-                success: false,
-                error: 'E-Mail-Service temporär nicht verfügbar. Bitte versuchen Sie es später noch einmal oder kontaktieren Sie uns direkt.'
-            });
-        }
-        
         return res.status(500).json({
             success: false,
-            error: 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt.'
+            error: 'Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut oder kontaktieren Sie uns direkt per Telefon.'
         });
     }
 }

@@ -324,40 +324,121 @@ class DigitalCraftWebsite {
                 submitBtn.innerHTML = '<span class="spinner"></span> Wird gesendet...';
             }
 
+            // Prepare form data
             const formData = new FormData(form);
+            
+            // Convert FormData to regular object for JSON
+            const formObject = {};
+            for (let [key, value] of formData.entries()) {
+                formObject[key] = value;
+            }
+            
+            // Add calculator data if available
+            const calculatorDataField = document.getElementById('calculator-data');
+            if (calculatorDataField && calculatorDataField.value) {
+                formObject['calculator-data'] = calculatorDataField.value;
+            }
+            
+            console.log('Submitting form data:', formObject);
+            
+            // Send as JSON to API
             const response = await fetch('/api/contact', {
                 method: 'POST',
-                body: formData
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(formObject)
             });
             
-            const result = await response.json();
+            console.log('Response status:', response.status);
+            
+            let result;
+            try {
+                result = await response.json();
+            } catch (jsonError) {
+                console.error('JSON parse error:', jsonError);
+                const responseText = await response.text();
+                console.error('Response text:', responseText);
+                throw new Error('Invalid response format from server');
+            }
+            
+            console.log('Response result:', result);
 
-            if (result.success) {
-                // Erfolgsmeldung anzeigen
+            if (response.ok && result.success) {
+                // Success message
                 const message = document.createElement('div');
                 message.className = 'form-message success';
                 message.innerHTML = `
                     <strong>✓ Vielen Dank!</strong><br>
-                    Ihre Nachricht wurde erfolgreich gesendet. Wir melden uns innerhalb von 48 Stunden bei Ihnen.
+                    ${result.message || 'Ihre Nachricht wurde erfolgreich gesendet. Wir melden uns innerhalb von 48 Stunden bei Ihnen.'}
                 `;
                 message.setAttribute('role', 'alert');
                 
-                // Meldung über dem Formular einfügen
+                // Insert message above form
                 form.insertBefore(message, form.firstChild);
                 
-                // Zum Anfang des Formulars scrollen
+                // Scroll to message
                 message.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 
-                // Formular zurücksetzen
+                // Reset form
                 form.reset();
                 
-                // Nach 10 Sekunden Erfolgsmeldung ausblenden
+                // Clear form data from localStorage
+                this.clearFormData();
+                
+                // Track successful submission
+                this.trackEvent('form_submission_success', {
+                    form_type: 'contact',
+                    has_calculator_data: !!calculatorDataField?.value
+                });
+                
+                // Remove success message after 10 seconds
                 setTimeout(() => message.remove(), 10000);
             } else {
-                this.showFormError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
+                // Server returned error
+                const errorMessage = result.error || 'Ein unbekannter Fehler ist aufgetreten.';
+                this.showFormError(errorMessage);
+                
+                // Track error
+                this.trackEvent('form_submission_error', {
+                    error_type: 'server_error',
+                    error_message: errorMessage,
+                    status_code: response.status
+                });
             }
         } catch (error) {
-            this.showFormError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
+            console.error('Form submission error:', error);
+            
+            let errorMessage = 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.';
+            
+            // Provide more specific error messages
+            if (error.message.includes('fetch')) {
+                errorMessage = 'Verbindungsfehler. Bitte überprüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.';
+            } else if (error.message.includes('JSON')) {
+                errorMessage = 'Server-Antwortfehler. Bitte versuchen Sie es später erneut.';
+            } else if (error.name === 'TypeError') {
+                errorMessage = 'Netzwerkfehler. Bitte versuchen Sie es später erneut.';
+            }
+            
+            // For free Vercel accounts, offer alternative contact methods
+            const fallbackMessage = `
+                <div style="margin-top: 1rem; padding: 1rem; background: #f3f4f6; border-radius: 8px;">
+                    <strong>Alternative Kontaktmöglichkeiten:</strong><br>
+                    • E-Mail: <a href="mailto:clgunduz@gmail.com">clgunduz@gmail.com</a><br>
+                    • Telefon: <a href="tel:+491234567890">+49 (0) 123 456 789</a><br>
+                    • WhatsApp: <a href="https://wa.me/491234567890" target="_blank">Direkt kontaktieren</a>
+                </div>
+            `;
+            
+            this.showFormError(errorMessage + fallbackMessage);
+            
+            // Track error
+            this.trackEvent('form_submission_error', {
+                error_type: 'network_error',
+                error_message: error.message,
+                vercel_free_tier: true
+            });
         } finally {
             if (submitBtn) {
                 submitBtn.disabled = false;
@@ -365,7 +446,7 @@ class DigitalCraftWebsite {
             }
         }
 
-        // Wichtig: Standardverhalten des Formulars verhindern
+        // Prevent default form submission
         return false;
     }
 
@@ -403,7 +484,15 @@ class DigitalCraftWebsite {
         message.setAttribute('role', 'alert');
         
         const form = document.querySelector('.contact-form');
+        
+        // Remove any existing error messages
+        const existingErrors = form.querySelectorAll('.form-message.error');
+        existingErrors.forEach(error => error.remove());
+        
         form?.insertBefore(message, form.firstChild);
+        
+        // Scroll to error message
+        message.scrollIntoView({ behavior: 'smooth', block: 'center' });
         
         setTimeout(() => message.remove(), 8000);
     }

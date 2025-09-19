@@ -244,8 +244,9 @@ Automatisch generiert von der SHK Website`;
 
                 // Send email with enhanced subject
                 const mailOptions = {
-                    from: process.env.GMAIL_USER || 'clgunduz@gmail.com',
+                    from: `"${name}" <${email}>`, // Customer's name and email as sender
                     to: process.env.GMAIL_USER || 'clgunduz@gmail.com',
+                    replyTo: email, // Ensure replies go to customer
                     subject: `🔧 SHK Anfrage: ${company} - ${calculatorData ? 'Mit Kalkulator' : 'Ohne Kalkulator'}`,
                     text: emailContent
                 };

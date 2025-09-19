@@ -56,11 +56,16 @@
     
     <title>SHK Webseite & Handwerker Homepage | Digital Craft Solutions</title>
     
-    <!-- Preload critical fonts -->
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    <!-- Preload critical fonts - CLS Optimierung -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
     
-    <!-- Inline critical CSS for above-the-fold content -->
+    <!-- Font-display swap für bessere CLS -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    </style>
+    
+    <!-- Inline critical CSS for above-the-fold content - CLS Optimiert -->
     <style>
         /* Critical CSS - Above the fold styling */
         :root {
@@ -85,6 +90,8 @@
             line-height: 1.6;
             color: var(--text-primary);
             background-color: var(--background-light);
+            /* CLS Fix: Font-loading Optimierung */
+            font-display: swap;
         }
         
         .header {
@@ -96,18 +103,72 @@
             border-bottom: 1px solid var(--border-color);
             z-index: 1000;
             height: 80px;
+            /* CLS Fix: Layout-Isolation */
+            contain: layout;
         }
         
         .hero {
             padding: 120px 0 80px;
             background: linear-gradient(135deg, var(--background-light) 0%, var(--background-gray) 50%, #f0f9ff 100%);
             min-height: 90vh;
+            /* CLS Fix: Reserve Platz für Hero-Content */
+            contain: layout;
+        }
+        
+        .hero-container {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+            /* CLS Fix: Minimale Höhe definiert */
+            min-height: 600px;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1.5rem;
+            line-height: 1.1;
+            /* CLS Fix: Font-Fallback */
+            font-family: var(--font-family);
         }
         
         .container {
             max-width: var(--max-width);
             margin: 0 auto;
             padding: 0 20px;
+        }
+        
+        /* Cookie Banner CLS Fix */
+        .cookie-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1001;
+            /* CLS Fix: Reserve Platz */
+            min-height: 80px;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+        
+        .cookie-banner.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        /* Loading States für bessere UX */
+        .hero-stats {
+            min-height: 140px;
+        }
+        
+        .hero-visual {
+            height: 500px;
+            contain: layout;
         }
     </style>
     

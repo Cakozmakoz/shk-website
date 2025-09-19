@@ -211,11 +211,29 @@ strong {
   font-size: 1.1rem;
 }
 
-/* Container */
-.container {
-  max-width: var(--max-width);
-  margin: 0 auto;
-  padding: 0 20px;
+/* Responsive Images - CLS Optimiert */
+img {
+  max-width: 100%;
+  height: auto;
+  /* CLS Fix: Aspect-Ratio definiert */
+  aspect-ratio: attr(width) / attr(height);
+  /* Performance-Optimierung */
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Lazy Loading Optimierung */
+img[loading="lazy"] {
+  /* CLS Fix: Placeholder während des Ladens */
+  background: var(--background-gray);
+  min-height: 200px;
+}
+
+/* SVG Optimierung */
+svg {
+  /* Performance-Boost */
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 /* Header */
@@ -353,7 +371,7 @@ strong {
   background: var(--background-gray);
 }
 
-/* Cookie Banner */
+/* Cookie Banner - CLS Optimiert */
 .cookie-banner {
   position: fixed;
   bottom: 0;
@@ -363,13 +381,20 @@ strong {
   border-top: 1px solid var(--border-color);
   padding: 20px;
   z-index: 1001;
-  transform: translateY(100%);
-  transition: var(--transition);
   box-shadow: var(--shadow-heavy);
+  /* CLS Fix: Reserve Platz und verwende opacity statt transform */
+  height: auto;
+  min-height: 80px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  /* Verhindert Layout-Shift beim ersten Laden */
+  will-change: opacity;
 }
 
 .cookie-banner.show {
-  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
 }
 
 .cookie-content {
@@ -386,13 +411,15 @@ strong {
   gap: 10px;
 }
 
-/* Hero Section - Redesigned */
+/* Hero Section - CLS Optimiert */
 .hero {
   padding: 120px 0 80px;
   background: linear-gradient(135deg, var(--background-light) 0%, var(--background-gray) 50%, #f0f9ff 100%);
   min-height: 90vh;
   display: flex;
   align-items: center;
+  /* CLS Fix: Feste Container-Höhe verhindert Layout-Shift */
+  contain: layout;
 }
 
 .hero-container {
@@ -403,6 +430,8 @@ strong {
   grid-template-columns: 1fr 1fr;
   gap: 60px;
   align-items: center;
+  /* CLS Fix: Feste minimale Höhe */
+  min-height: 600px;
 }
 
 .hero-badge {
@@ -467,7 +496,7 @@ strong {
   font-size: 1.2rem;
 }
 
-/* 4-Box Hero Stats */
+/* 4-Box Hero Stats - CLS Optimiert */
 .hero-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -477,6 +506,9 @@ strong {
   background: white;
   border-radius: var(--border-radius-large);
   box-shadow: var(--shadow-medium);
+  /* CLS Fix: Feste Höhe verhindert Layout-Shift */
+  min-height: 140px;
+  contain: layout;
 }
 
 .stat {
@@ -520,22 +552,31 @@ strong {
   font-size: 0.9rem;
 }
 
-/* Hero Visual */
+/* Hero Visual - CLS Optimiert */
 .hero-visual {
   position: relative;
+  /* CLS Fix: Feste Höhe verhindert Layout-Shift */
   height: 500px;
+  width: 100%;
+  contain: layout;
+  /* Preload-Optimierung für SVG */
+  will-change: transform;
 }
 
 .hero-image {
   width: 100%;
   height: 100%;
   position: relative;
+  /* CLS Fix: Aspect-Ratio beibehalten */
+  aspect-ratio: 4/3;
 }
 
 .hero-image svg {
   width: 100%;
   height: 100%;
   filter: drop-shadow(var(--shadow-medium));
+  /* Performance-Optimierung */
+  transform: translateZ(0);
 }
 
 /* Floating Benefits */

@@ -803,11 +803,6 @@
                     <button type="submit" class="btn btn-primary">
                         Kostenlose SHK Website Beratung anfordern
                     </button>
-                    
-                    <!-- Test Button for Popup (temporary) -->
-                    <button type="button" class="btn btn-secondary" onclick="testPopup()" style="margin-top: 1rem; background: #fbbf24; color: #1f2937;">
-                        🧪 Test Popup (Debug)
-                    </button>
                 </form>
                 
                 <div class="contact-info">
@@ -932,29 +927,6 @@
     
     // Make function globally available
     window.scrollToSection = scrollToSection;
-    
-    // Test popup function for debugging
-    function testPopup() {
-        console.log('Test popup clicked');
-        
-        // Try different methods to show popup
-        if (window.digitalCraftWebsite && window.digitalCraftWebsite.showStyledSuccessPopup) {
-            console.log('Using DigitalCraftWebsite class method');
-            window.digitalCraftWebsite.showStyledSuccessPopup('Dies ist ein Test-Popup. Wenn Sie das sehen, funktioniert das Popup!');
-        } else if (window.showStyledSuccessPopup) {
-            console.log('Using global showStyledSuccessPopup function');
-            window.showStyledSuccessPopup('Dies ist ein Test-Popup. Wenn Sie das sehen, funktioniert das Popup!');
-        } else if (typeof showFallbackPopup === 'function') {
-            console.log('Using fallback popup function');
-            showFallbackPopup('Dies ist ein Test-Popup. Wenn Sie das sehen, funktioniert das Popup!');
-        } else {
-            console.log('No popup functions available, using alert');
-            alert('Test-Popup: Keine Popup-Funktionen verfügbar!');
-        }
-    }
-    
-    // Make test function globally available
-    window.testPopup = testPopup;
     
     // Preload main script but ensure calculator works immediately
     document.addEventListener('DOMContentLoaded', function() {

@@ -55,10 +55,77 @@
     </script>
     
     <title>SHK Webseite & Handwerker Homepage | Digital Craft Solutions</title>
-    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Preload critical fonts -->
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    
+    <!-- Inline critical CSS for above-the-fold content -->
+    <style>
+        /* Critical CSS - Above the fold styling */
+        :root {
+            --primary-color: #1e40af;
+            --secondary-color: #ea580c;
+            --accent-color: #059669;
+            --text-primary: #1f2937;
+            --text-secondary: #4b5563;
+            --background-light: #ffffff;
+            --background-gray: #f9fafb;
+            --border-color: #e5e7eb;
+            --shadow-medium: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --max-width: 1200px;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: var(--font-family);
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: var(--background-light);
+        }
+        
+        .header {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            z-index: 1000;
+            height: 80px;
+        }
+        
+        .hero {
+            padding: 120px 0 80px;
+            background: linear-gradient(135deg, var(--background-light) 0%, var(--background-gray) 50%, #f0f9ff 100%);
+            min-height: 90vh;
+        }
+        
+        .container {
+            max-width: var(--max-width);
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+    </style>
+    
+    <!-- Preload main stylesheet -->
+    <link rel="preload" href="styles.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="styles.css"></noscript>
+    
+    <!-- DNS prefetch for external resources -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//fonts.gstatic.com">
+    
+    <!-- Preconnect for critical third-party origins -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Roboto+Slab:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/favicon.ico" as="image">
+    
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="canonical" href="https://digitalcraft-solutions.de">
 </head>
@@ -623,7 +690,7 @@
                         <li>✓ Support per E-Mail</li>
                         <li>✓ Mobile Handwerker Design</li>
                     </ul>
-                    <button class="btn btn-secondary">SHK Website anfragen</button>
+                    <button class="btn btn-secondary" onclick="scrollToSection('contact')">SHK Website anfragen</button>
                 </div>
                 
                 <div class="pricing-card featured">
@@ -639,7 +706,7 @@
                         <li>✓ Telefonischer Support</li>
                         <li>✓ Wartungserinnerungen Heizung</li>
                     </ul>
-                    <button class="btn btn-primary">Handwerker Website starten</button>
+                    <button class="btn btn-primary" onclick="scrollToSection('contact')">Handwerker Website starten</button>
                 </div>
                 
                 <div class="pricing-card">
@@ -654,7 +721,7 @@
                         <li>✓ Priority Support</li>
                         <li>✓ Multi-Standort Management</li>
                     </ul>
-                    <button class="btn btn-secondary">SHK Premium anfragen</button>
+                    <button class="btn btn-secondary" onclick="scrollToSection('contact')">SHK Premium anfragen</button>
                 </div>
             </div>
             
@@ -847,4 +914,421 @@
 </footer>
 
 <!-- Scripts -->
-<script src="script.js"></script>
+<script>
+    // Critical functionality that must load immediately
+    function scrollToSection(sectionId) {
+        const element = document.getElementById(sectionId);
+        if (element) {
+            const headerHeight = 80;
+            const targetPosition = element.offsetTop - headerHeight - 20;
+            window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+        }
+    }
+    
+    // Make function globally available
+    window.scrollToSection = scrollToSection;
+    
+    // Preload main script but ensure calculator works immediately
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load main script
+        const script = document.createElement('script');
+        script.src = 'script.js';
+        script.onload = function() {
+            // Initialize calculator after main script loads
+            if (window.digitalCraftWebsite) {
+                window.digitalCraftWebsite.setupCalculator();
+            }
+        };
+        document.head.appendChild(script);
+        
+        // Basic calculator functionality for immediate use
+        setupBasicCalculator();
+    });
+    
+    function setupBasicCalculator() {
+        // Initialize calculator data
+        window.calculatorData = {
+            currentStep: 1,
+            selectedBase: null,
+            selectedAddons: [],
+            selectedDetails: {
+                'industry': 'shk',
+                'company-size': 'small',
+                'locations': '1',
+                'support': 'email'
+            },
+            selectedContract: null,
+            prices: {
+                base: 0,
+                addons: 0,
+                support: 0,
+                subtotal: 0,
+                discount: 0,
+                total: 0,
+                setup: 2500
+            }
+        };
+        
+        // Initialize price display
+        updatePriceDisplay();
+        
+        // Handle option button clicks immediately
+        document.querySelectorAll('.option-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const card = e.target.closest('.option-card');
+                const service = card.dataset.service;
+                const price = parseInt(card.dataset.price);
+                
+                // Remove previous selections
+                document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+                
+                // Add selection to current card
+                card.classList.add('selected');
+                
+                // Update calculator data
+                window.calculatorData.selectedBase = service;
+                window.calculatorData.prices.base = price;
+                
+                // Update price display
+                updatePriceDisplay();
+                
+                // Enable next button
+                const nextBtn = document.querySelector('.next-btn');
+                if (nextBtn) {
+                    nextBtn.disabled = false;
+                }
+                
+                // Auto-advance to next step after short delay
+                setTimeout(() => {
+                    const nextBtn = document.querySelector('.next-btn');
+                    if (nextBtn && !nextBtn.disabled) {
+                        nextBtn.click();
+                    }
+                }, 500);
+            });
+        });
+        
+        // Handle addon toggles
+        document.querySelectorAll('input[name="addons"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function(e) {
+                const addon = e.target.dataset.addon;
+                const price = parseInt(e.target.closest('.addon-card').dataset.price);
+                
+                if (e.target.checked) {
+                    // Add addon
+                    if (!window.calculatorData.selectedAddons.find(a => a.addon === addon)) {
+                        window.calculatorData.selectedAddons.push({ addon, price });
+                        window.calculatorData.prices.addons += price;
+                        e.target.closest('.addon-card').classList.add('selected');
+                    }
+                } else {
+                    // Remove addon
+                    window.calculatorData.selectedAddons = window.calculatorData.selectedAddons.filter(a => a.addon !== addon);
+                    window.calculatorData.prices.addons -= price;
+                    e.target.closest('.addon-card').classList.remove('selected');
+                }
+                
+                updatePriceDisplay();
+            });
+        });
+        
+        // Handle detail selects
+        document.querySelectorAll('select[name]').forEach(select => {
+            select.addEventListener('change', function(e) {
+                const name = e.target.name;
+                const value = e.target.value;
+                
+                window.calculatorData.selectedDetails[name] = value;
+                
+                // Handle support pricing
+                if (name === 'support') {
+                    const option = e.target.querySelector(`option[value="${value}"]`);
+                    if (option && option.dataset.price) {
+                        window.calculatorData.prices.support = parseInt(option.dataset.price) || 0;
+                    }
+                }
+                
+                updatePriceDisplay();
+            });
+        });
+        
+        // Handle contract selection
+        document.querySelectorAll('.contract-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const duration = card.dataset.duration;
+                const discount = parseFloat(card.dataset.discount);
+                
+                // Remove previous selections
+                document.querySelectorAll('.contract-card').forEach(c => c.classList.remove('selected'));
+                
+                // Add selection to current card
+                card.classList.add('selected');
+                
+                // Update calculator data
+                window.calculatorData.selectedContract = { duration, discount };
+                
+                updatePriceDisplay();
+                
+                // Enable calculate button
+                const calculateBtn = document.querySelector('.calculate-btn');
+                if (calculateBtn) {
+                    calculateBtn.disabled = false;
+                }
+            });
+        });
+        
+        function updatePriceDisplay() {
+            const data = window.calculatorData;
+            const prices = data.prices;
+            
+            // Calculate base subtotal
+            let baseSubtotal = prices.base + prices.addons + prices.support;
+            
+            // Apply company size and location modifiers
+            let modifier = 1;
+            
+            // Company size modifier
+            if (data.selectedDetails['company-size']) {
+                const sizeSelect = document.querySelector('select[name="company-size"]');
+                const selectedOption = sizeSelect?.querySelector(`option[value="${data.selectedDetails['company-size']}"]`);
+                if (selectedOption && selectedOption.dataset.modifier) {
+                    const sizeModifier = parseFloat(selectedOption.dataset.modifier);
+                    modifier *= (1 + sizeModifier);
+                }
+            }
+            
+            // Location modifier
+            if (data.selectedDetails['locations']) {
+                const locationSelect = document.querySelector('select[name="locations"]');
+                const selectedOption = locationSelect?.querySelector(`option[value="${data.selectedDetails['locations']}"]`);
+                if (selectedOption && selectedOption.dataset.modifier) {
+                    const locationModifier = parseFloat(selectedOption.dataset.modifier);
+                    modifier *= (1 + locationModifier);
+                }
+            }
+            
+            // Apply modifiers to subtotal
+            prices.subtotal = Math.round(baseSubtotal * modifier);
+            
+            // Apply contract discount
+            if (data.selectedContract) {
+                prices.discount = Math.round(prices.subtotal * data.selectedContract.discount);
+            } else {
+                prices.discount = 0;
+            }
+            
+            // Calculate final total
+            prices.total = prices.subtotal - prices.discount;
+            
+            // Update setup fee based on package and modifiers
+            if (data.selectedBase === 'basic-website') {
+                prices.setup = Math.round(2500 * modifier);
+            } else if (data.selectedBase === 'professional-website') {
+                prices.setup = Math.round(4500 * modifier);
+            } else if (data.selectedBase === 'premium-website') {
+                prices.setup = Math.round(7500 * modifier);
+            }
+            
+            // Update UI elements if they exist
+            const basePrice = document.querySelector('.base-price');
+            const addonsPrice = document.querySelector('.addons-price');
+            const supportPrice = document.querySelector('.support-price');
+            const subtotalPrice = document.querySelector('.subtotal-price');
+            const totalPrice = document.querySelector('.total-price');
+            const setupPrice = document.querySelector('.setup-price');
+            const discountPrice = document.querySelector('.discount-price');
+            const discountLine = document.querySelector('.price-line.discount');
+            
+            if (basePrice) basePrice.textContent = `${prices.base}€`;
+            if (addonsPrice) addonsPrice.textContent = `${prices.addons}€`;
+            if (supportPrice) supportPrice.textContent = `${prices.support}€`;
+            if (subtotalPrice) subtotalPrice.textContent = `${prices.subtotal}€`;
+            if (totalPrice) totalPrice.textContent = `${prices.total}€`;
+            if (setupPrice) setupPrice.textContent = `${prices.setup}€`;
+            
+            if (discountLine) {
+                if (prices.discount > 0) {
+                    if (discountPrice) discountPrice.textContent = `-${prices.discount}€`;
+                    discountLine.style.display = 'flex';
+                } else {
+                    discountLine.style.display = 'none';
+                }
+            }
+            
+            // Update selected items display
+            updateSelectedItemsDisplay();
+        }
+        
+        function updateSelectedItemsDisplay() {
+            const container = document.querySelector('.selected-items');
+            if (!container) return;
+            
+            const data = window.calculatorData;
+            let html = '';
+            
+            if (data.selectedBase) {
+                const baseNames = {
+                    'basic-website': 'Essential Website',
+                    'professional-website': 'Professional Website', 
+                    'premium-website': 'Premium Website'
+                };
+                html += `<div class="item"><span>${baseNames[data.selectedBase] || data.selectedBase}</span><span>${data.prices.base}€</span></div>`;
+            }
+            
+            data.selectedAddons.forEach(addon => {
+                const addonNames = {
+                    'ai-integration': 'KI-Integration',
+                    'booking-system': 'Online Terminbuchung',
+                    'crm-integration': 'CRM & Analytics',
+                    'whatsapp-integration': 'WhatsApp Business',
+                    'multilingual': 'Mehrsprachigkeit',
+                    'workflow-automation': 'Workflow Automatisierung'
+                };
+                html += `<div class="item"><span>${addonNames[addon.addon] || addon.addon}</span><span>+${addon.price}€</span></div>`;
+            });
+            
+            if (data.prices.support > 0) {
+                html += `<div class="item"><span>Support</span><span>+${data.prices.support}€</span></div>`;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        // Handle navigation buttons
+        const nextBtn = document.querySelector('.next-btn');
+        const prevBtn = document.querySelector('.prev-btn');
+        
+        if (nextBtn) {
+            nextBtn.addEventListener('click', function() {
+                const currentStep = document.querySelector('.calculator-step.active');
+                const currentStepNum = parseInt(currentStep.dataset.step);
+                const nextStepNum = currentStepNum + 1;
+                const nextStep = document.querySelector(`[data-step="${nextStepNum}"]`);
+                
+                if (nextStep) {
+                    currentStep.classList.remove('active');
+                    nextStep.classList.add('active');
+                    
+                    // Update navigation
+                    prevBtn.disabled = false;
+                    if (nextStepNum >= 4) {
+                        nextBtn.style.display = 'none';
+                        const calculateBtn = document.querySelector('.calculate-btn');
+                        if (calculateBtn) {
+                            calculateBtn.style.display = 'inline-flex';
+                        }
+                    }
+                    
+                    // Update step indicators
+                    document.querySelectorAll('.step-dot').forEach((dot, index) => {
+                        dot.classList.remove('active', 'completed');
+                        if (index + 1 < nextStepNum) {
+                            dot.classList.add('completed');
+                        } else if (index + 1 === nextStepNum) {
+                            dot.classList.add('active');
+                        }
+                    });
+                }
+            });
+        }
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', function() {
+                const currentStep = document.querySelector('.calculator-step.active');
+                const currentStepNum = parseInt(currentStep.dataset.step);
+                const prevStepNum = currentStepNum - 1;
+                const prevStep = document.querySelector(`[data-step="${prevStepNum}"]`);
+                
+                if (prevStep && prevStepNum >= 1) {
+                    currentStep.classList.remove('active');
+                    prevStep.classList.add('active');
+                    
+                    // Update navigation
+                    nextBtn.style.display = 'inline-flex';
+                    nextBtn.disabled = false;
+                    prevBtn.disabled = prevStepNum <= 1;
+                    
+                    const calculateBtn = document.querySelector('.calculate-btn');
+                    if (calculateBtn) {
+                        calculateBtn.style.display = 'none';
+                    }
+                    
+                    // Update step indicators
+                    document.querySelectorAll('.step-dot').forEach((dot, index) => {
+                        dot.classList.remove('active', 'completed');
+                        if (index + 1 < prevStepNum) {
+                            dot.classList.add('completed');
+                        } else if (index + 1 === prevStepNum) {
+                            dot.classList.add('active');
+                        }
+                    });
+                }
+            });
+        }
+        
+        // Handle calculate button
+        const calculateBtn = document.querySelector('.calculate-btn');
+        if (calculateBtn) {
+            calculateBtn.addEventListener('click', function() {
+                // Save calculator data to form
+                const calculatorDataField = document.getElementById('calculator-data');
+                if (calculatorDataField) {
+                    const dataToSave = {
+                        ...window.calculatorData,
+                        timestamp: new Date().toISOString()
+                    };
+                    calculatorDataField.value = JSON.stringify(dataToSave);
+                }
+                
+                scrollToSection('contact');
+                
+                // Show completion message
+                const message = document.createElement('div');
+                message.className = 'calculator-complete-message';
+                message.innerHTML = `
+                    <div class="success-icon">✓</div>
+                    <h3>Konfiguration abgeschlossen!</h3>
+                    <p>Ihre Auswahl wurde gespeichert. Füllen Sie jetzt das Kontaktformular aus, um Ihr individuelles Angebot zu erhalten.</p>
+                `;
+                message.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: white;
+                    padding: 2rem;
+                    border-radius: 12px;
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+                    text-align: center;
+                    z-index: 2000;
+                    max-width: 400px;
+                `;
+                
+                const overlay = document.createElement('div');
+                overlay.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(0, 0, 0, 0.5);
+                    z-index: 1999;
+                `;
+                
+                document.body.appendChild(overlay);
+                document.body.appendChild(message);
+                
+                setTimeout(() => {
+                    message.remove();
+                    overlay.remove();
+                }, 3000);
+                
+                overlay.addEventListener('click', () => {
+                    message.remove();
+                    overlay.remove();
+                });
+            });
+        }
+    }
+</script>

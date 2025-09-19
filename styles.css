@@ -1,12 +1,14 @@
+/* Critical CSS already inlined - this file loads deferred */
+
 /* CSS Custom Properties für Handwerker-Branding */
 :root {
   /* Handwerker-optimierte Farbpalette */
-  --primary-color: #1e40af; /* Vertrauensvolles Blau (Wasser/Technik) */
+  --primary-color: #1e40af;
   --primary-dark: #1e3a8a;
-  --secondary-color: #ea580c; /* Handwerker Orange (Wärme/Energie) */
+  --secondary-color: #ea580c;
   --secondary-light: #fb923c;
-  --accent-color: #059669; /* Erfolgs-Grün (Klima/Umwelt) */
-  --warning-color: #d97706; /* Notdienst Gelb/Orange */
+  --accent-color: #059669;
+  --warning-color: #d97706;
   --error-color: #dc2626;
   
   /* Text & Backgrounds */
@@ -19,10 +21,10 @@
   --border-color: #e5e7eb;
   
   /* Handwerker-spezifische Farben */
-  --handwerk-blue: #1e40af; /* SHK Blau */
-  --handwerk-orange: #ea580c; /* Heizung Orange */
-  --handwerk-green: #059669; /* Klima Grün */
-  --handwerk-gray: #6b7280; /* Neutral Grau */
+  --handwerk-blue: #1e40af;
+  --handwerk-orange: #ea580c;
+  --handwerk-green: #059669;
+  --handwerk-gray: #6b7280;
   
   /* Schatten & Effekte */
   --shadow-light: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
@@ -34,8 +36,9 @@
   --border-radius-large: 16px;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --max-width: 1200px;
+  /* Optimized font stack with fewer weights */
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-family-heading: 'Roboto Slab', serif;
+  --font-family-heading: 'Inter', serif;
 }
 
 /* Dark Mode */

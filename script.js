@@ -1,6 +1,47 @@
 // Modern JavaScript für Digital Craft Solutions Website
+// Optimized for PageSpeed performance
 // ES6+ Features, Accessibility, Performance optimiert
-// Erweitert mit SEO-Funktionen und Handwerker-spezifischen Features
+
+// Use requestAnimationFrame for smooth performance
+const RAF = window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame;
+
+// Batch DOM operations for better performance
+class DOMBatcher {
+    constructor() {
+        this.readOperations = [];
+        this.writeOperations = [];
+        this.scheduled = false;
+    }
+    
+    read(fn) {
+        this.readOperations.push(fn);
+        this.schedule();
+    }
+    
+    write(fn) {
+        this.writeOperations.push(fn);
+        this.schedule();
+    }
+    
+    schedule() {
+        if (this.scheduled) return;
+        this.scheduled = true;
+        
+        RAF(() => {
+            // Perform all reads first
+            this.readOperations.forEach(fn => fn());
+            this.readOperations = [];
+            
+            // Then all writes
+            this.writeOperations.forEach(fn => fn());
+            this.writeOperations = [];
+            
+            this.scheduled = false;
+        });
+    }
+}
+
+const domBatcher = new DOMBatcher();
 
 
 
@@ -41,15 +82,17 @@ class DigitalCraftWebsite {
             this.optimizeImages();
         });
 
-        // Scroll Events (throttled)
+        // Scroll Events (optimized with passive listeners)
+        let ticking = false;
         window.addEventListener('scroll', () => {
-            if (!this.scrollTimeout) {
-                this.scrollTimeout = setTimeout(() => {
+            if (!ticking) {
+                RAF(() => {
                     this.handleScroll();
-                    this.scrollTimeout = null;
-                }, 16); // ~60fps
+                    ticking = false;
+                });
+                ticking = true;
             }
-        });
+        }, { passive: true });
 
         // Resize Events (debounced)
         window.addEventListener('resize', () => {
@@ -810,7 +853,10 @@ class DigitalCraftWebsite {
 
     // Performance optimizations
     performanceOptimizations() {
-        // Lazy load images
+        // Measure and log Core Web Vitals
+        this.measureWebVitals();
+        
+        // Lazy load images with Intersection Observer
         if ('IntersectionObserver' in window) {
             const imageObserver = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
@@ -825,11 +871,39 @@ class DigitalCraftWebsite {
                         }
                     }
                 });
+            }, {
+                rootMargin: '50px' // Load images 50px before they come into view
             });
             
             document.querySelectorAll('img[data-src]').forEach(img => {
                 imageObserver.observe(img);
             });
+        }
+    }
+    
+    measureWebVitals() {
+        // Measure CLS (Cumulative Layout Shift)
+        if ('PerformanceObserver' in window) {
+            const observer = new PerformanceObserver((list) => {
+                let cls = 0;
+                list.getEntries().forEach((entry) => {
+                    if (!entry.hadRecentInput) {
+                        cls += entry.value;
+                    }
+                });
+                console.log('CLS:', cls);
+            });
+            observer.observe({ entryTypes: ['layout-shift'] });
+        }
+        
+        // Measure LCP (Largest Contentful Paint)
+        if ('PerformanceObserver' in window) {
+            const observer = new PerformanceObserver((list) => {
+                const entries = list.getEntries();
+                const lastEntry = entries[entries.length - 1];
+                console.log('LCP:', lastEntry.startTime);
+            });
+            observer.observe({ entryTypes: ['largest-contentful-paint'] });
         }
     }
 
@@ -1029,8 +1103,16 @@ class DigitalCraftWebsite {
     }
 
     setupCalculatorEventListeners() {
+        // Skip if basic calculator already handled base selection
+        const existingListeners = document.querySelector('.option-btn[data-listener="true"]');
+        if (existingListeners) {
+            this.setupAdvancedCalculatorFeatures();
+            return;
+        }
+        
         // Base package selection
         document.querySelectorAll('.option-btn').forEach(btn => {
+            btn.setAttribute('data-listener', 'true');
             btn.addEventListener('click', (e) => {
                 const card = e.target.closest('.option-card');
                 const service = card.dataset.service;
@@ -1040,6 +1122,10 @@ class DigitalCraftWebsite {
             });
         });
 
+        this.setupAdvancedCalculatorFeatures();
+    }
+    
+    setupAdvancedCalculatorFeatures() {
         // Addon toggles
         document.querySelectorAll('input[name="addons"]').forEach(checkbox => {
             checkbox.addEventListener('change', (e) => {
@@ -1068,19 +1154,29 @@ class DigitalCraftWebsite {
             });
         });
 
-        // Navigation buttons
-        document.querySelector('.prev-btn')?.addEventListener('click', () => {
-            this.previousStep();
-        });
-        
-        document.querySelector('.next-btn')?.addEventListener('click', () => {
-            this.nextStep();
-        });
+        // Enhanced navigation buttons (don't override basic ones if they exist)
+        const existingNext = document.querySelector('.next-btn[data-enhanced="true"]');
+        if (!existingNext) {
+            document.querySelector('.prev-btn')?.addEventListener('click', () => {
+                this.previousStep();
+            });
+            
+            document.querySelector('.next-btn')?.addEventListener('click', () => {
+                this.nextStep();
+            });
+        }
 
-        // Calculate button
-        document.querySelector('.calculate-btn')?.addEventListener('click', () => {
-            this.generateQuote();
-        });
+        // Enhanced calculate button
+        const existingCalc = document.querySelector('.calculate-btn[data-enhanced="true"]');
+        if (!existingCalc) {
+            const calcBtn = document.querySelector('.calculate-btn');
+            if (calcBtn) {
+                calcBtn.setAttribute('data-enhanced', 'true');
+                calcBtn.addEventListener('click', () => {
+                    this.generateQuote();
+                });
+            }
+        }
     }
 
     selectBasePackage(service, price) {
